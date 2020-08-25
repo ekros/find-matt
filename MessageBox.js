@@ -12,7 +12,7 @@ class MessageBox {
 
         console.log("this.raycaster.ray", raycaster.ray);
         let target = new THREE.Vector3();
-        raycaster.ray.at(50, target);
+        raycaster.ray.at(45, target);
         console.log("target", target);
 
         this.position = position || { x: target.x, y: target.y, z: target.z };
@@ -29,7 +29,7 @@ class MessageBox {
         this.plane = new THREE.Mesh( geometry, this.material );
         console.log("y", y);
         this.plane.position.x = x;
-        this.plane.position.y = y - 50;
+        this.plane.position.y = y - 25;
         this.plane.position.z = z;
 
         this.plane.lookAt(this.cameraPosition);

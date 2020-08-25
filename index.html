@@ -217,7 +217,7 @@
           if (gameState === GAME_STATES.SCANNING) {
             // TODO-ING: progress passin 100%%
             // then the system is marked as visited (later you can collect resources)
-            scanProgress += 0.1;
+            scanProgress += 0.2;
             message.render(`SCANNING...${scanProgress.toFixed(1)}%`);
             if (scanProgress >= 100) {
               gameState = null;
@@ -225,7 +225,7 @@
               // let's reveal what is in this system
               if (!destinationObject.mattIsHere) {
                 message.render("Not found");
-                destinationObject.material.color.setHSL( 0, 1, 0.7 );
+                destinationObject.material.color.setHSL( 0.4, 1, 0.7 );
                 setTimeout(() => {
                   message.destroy();
                 }, 2000);
@@ -241,7 +241,7 @@
           if (selectedObject && speed === 0 && selectedObject.systemId !== orbitingSystemId) {
 
             // console.log(selectedObject)
-            selectedObject.material.color.setHSL( 0.5, 1, 0.5 );
+            selectedObject.material.color.setHSL( 0.7, 1, 0.8 );
             goTo(selectedObject);
           }
   				// starship.lookAt( scene.position );
