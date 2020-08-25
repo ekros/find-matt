@@ -1,0 +1,304 @@
+<html>
+<head>
+<script src="https://js13kgames.com/webxr-src/2020/three.js"></script>
+<style>
+    body { margin: 0; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <script src="VRButton.js"></script>
+  <script>
+
+  var camera, scene, renderer, stats, material;
+  			var mouseX = 0, mouseY = 0;
+
+  			var windowHalfX = window.innerWidth / 2;
+  			var windowHalfY = window.innerHeight / 2;
+        // const isMouseDown = false;
+        // let onMouseDownPosition;
+        let mouse;
+
+  			init();
+  			animate();
+
+  			function init() {
+
+  				camera = new THREE.PerspectiveCamera( 55, window.innerWidth / window.innerHeight, 2, 2000 );
+  				camera.position.z = 1000;
+
+  				scene = new THREE.Scene();
+  				scene.fog = new THREE.FogExp2( 0x000000, 0.001 );
+
+  				var geometry = new THREE.BufferGeometry();
+  				var vertices = [];
+
+  				var sprite = new THREE.TextureLoader().load( 'sprites/disc.png' );
+
+  				for ( var i = 0; i < 10000; i ++ ) {
+
+  					var x = 2000 * Math.random() - 1000;
+  					var y = 2000 * Math.random() - 1000;
+  					var z = 2000 * Math.random() - 1000;
+
+  					vertices.push( x, y, z );
+
+  				}
+
+  				geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( vertices, 3 ) );
+
+  				material = new THREE.PointsMaterial( { size: 35, sizeAttenuation: true, map: sprite, alphaTest: 0.5, transparent: true } );
+  				material.color.setHSL( 1.0, 0.3, 0.7 );
+
+  				var particles = new THREE.Points( geometry, material );
+  				scene.add( particles );
+
+  				//
+
+  				renderer = new THREE.WebGLRenderer();
+  				renderer.setPixelRatio( window.devicePixelRatio );
+  				renderer.setSize( window.innerWidth, window.innerHeight );
+          renderer.xr.enabled = true;
+  				document.body.appendChild( renderer.domElement );
+          document.body.appendChild(VRButton.createButton(renderer));
+
+  				//
+
+  				// document.addEventListener( 'mousedown', onDocumentMouseDown, false );
+  				// document.addEventListener( 'mouseup', onDocumentMouseUp, false );
+  				document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+  				document.addEventListener( 'touchstart', onDocumentTouchStart, false );
+  				document.addEventListener( 'touchmove', onDocumentTouchMove, false );
+
+  				//
+
+  				window.addEventListener( 'resize', onWindowResize, false );
+
+          // mouse = new MouseControl(camera, "main");
+  			}
+      function animate() {
+
+				requestAnimationFrame( animate );
+
+				render();
+
+			}
+
+      function onWindowResize() {
+
+    				windowHalfX = window.innerWidth / 2;
+    				windowHalfY = window.innerHeight / 2;
+
+    				camera.aspect = window.innerWidth / window.innerHeight;
+    				camera.updateProjectionMatrix();
+
+    				renderer.setSize( window.innerWidth, window.innerHeight );
+
+    		}
+
+        function onDocumentMouseMove( event ) {
+
+    				mouseX = event.clientX - windowHalfX;
+    				mouseY = event.clientY - windowHalfY;
+
+    			}
+  //     function onDocumentMouseDown( event ) {
+  //       isMouseDown = true;
+  //       onMouseDownPosition = { x: event.clientX, y: event.clientY };
+  //     }
+  //
+  //     function onDocumentMouseUp( event ) {
+  //       isMouseDown = false;
+  //     }
+  //
+  //       function onDocumentMouseMove( event ) {
+  //
+  //     event.preventDefault();
+  //
+  //     if ( isMouseDown ) {
+  //
+  //         theta = - ( ( event.clientX - onMouseDownPosition.x ) * 0.5 )
+  //                 + onMouseDownTheta;
+  //         phi = ( ( event.clientY - onMouseDownPosition.y ) * 0.5 )
+  //               + onMouseDownPhi;
+  //
+  //         phi = Math.min( 180, Math.max( 0, phi ) );
+  //
+  //         camera.position.x = radious * Math.sin( theta * Math.PI / 360 )
+  //                             * Math.cos( phi * Math.PI / 360 );
+  //         camera.position.y = radious * Math.sin( phi * Math.PI / 360 );
+  //         camera.position.z = radious * Math.cos( theta * Math.PI / 360 )
+  //                             * Math.cos( phi * Math.PI / 360 );
+  //         camera.updateMatrix();
+  //
+  //     }
+  //
+  //     mouse3D = projector.unprojectVector(
+  //         new THREE.Vector3(
+  //             ( event.clientX / renderer.domElement.width ) * 2 - 1,
+  //             - ( event.clientY / renderer.domElement.height ) * 2 + 1,
+  //             0.5
+  //         ),
+  //         camera
+  //     );
+  //     ray.direction = mouse3D.subSelf( camera.position ).normalize();
+  //
+  //     render();
+  //
+  // }
+
+			function onDocumentTouchStart( event ) {
+
+				if ( event.touches.length == 1 ) {
+
+					event.preventDefault();
+
+					mouseX = event.touches[ 0 ].pageX - windowHalfX;
+					mouseY = event.touches[ 0 ].pageY - windowHalfY;
+
+				}
+
+			}
+
+			function onDocumentTouchMove( event ) {
+
+				if ( event.touches.length == 1 ) {
+
+					event.preventDefault();
+
+					mouseX = event.touches[ 0 ].pageX - windowHalfX;
+					mouseY = event.touches[ 0 ].pageY - windowHalfY;
+
+				}
+
+			}
+
+			function render() {
+
+				var time = Date.now() * 0.00005;
+
+				camera.position.x += ( mouseX - camera.position.x ) * 0.05;
+				camera.position.y += ( - mouseY - camera.position.y ) * 0.05;
+
+				camera.lookAt( scene.position );
+
+				// var h = ( 360 * ( 1.0 + time ) % 360 ) / 360;
+				// material.color.setHSL( h, 0.5, 0.5 );
+
+				renderer.render( scene, camera );
+
+			}
+  </script>
+</body>
+</html>
+
+<!-- class MouseControl {
+constructor(camera, instanceId, sensitivity = 4) {
+  console.log(`%c${instanceId}`, "background:green;color:white;");
+  console.log(`%c${camera}`, "background:blue;color:white;");
+  this.instanceId = instanceId;
+  this.camera = camera;
+  this.sensitivity = sensitivity;
+
+  console.log("camera", camera);
+  this.lookAt = {x: 0, y: 0, z: 0};
+  this.mouseX = 0;
+  this.mouseY = 0;
+  this.previousDirection = {
+    x: 0,
+    y: 0,
+    z: 0
+  };
+  document.addEventListener("mousedown", this.handleMouseDown);
+}
+
+handleMouseDown = ev => {
+  // console.log("mousedown", this.camera.rotation);
+  document.addEventListener("mousemove", this.handleMouseMove);
+  document.addEventListener("mouseup", this.handleMouseUp);
+  document.body.style.cursor = "grabbing";
+  this.mouseX = 0;
+  this.mouseY = 0;
+}
+
+handleMouseUp = ev => {
+  console.log("mouseup", this.instanceId);
+  document.removeEventListener("mousemove", this.handleMouseMove);
+  document.removeEventListener("mouseup", this.handleMouseUp);
+  document.body.style.cursor = "default";
+  this.previousDirection = {
+    x: 0,
+    y: 0,
+    z: 0
+  }
+}
+
+handleMouseMove = ev => { // TODO: camera direction is being set using absolute position, not relative.
+  // this.camera.lookAt(this.camera.rotation.x, this.camera.rotation.y, this.camera.rotation.z + 0.01);
+  // const deltaX = ev.pageX - this.mouseX;
+  // const deltaY = ev.pageY - this.mouseY;
+  // console.log("x", deltaX);
+  // console.log("y", deltaY);
+
+
+  const direction = this.getDirection(ev);
+  this.lookAt.x += (direction.x - this.previousDirection.x) * this.sensitivity;
+  this.lookAt.y += (direction.y - this.previousDirection.y) * this.sensitivity;
+  this.lookAt.z += (direction.z - this.previousDirection.z) * this.sensitivity;
+
+  this.previousDirection = direction;
+
+  // this.lookAt.x += deltaX * 0.005;
+  // this.lookAt.y += deltaY * 0.005;
+
+  // this.lookAt.x += ev.pageX - (window.innerWidth / 2);
+  // this.lookAt.y += ev.pageY - (window.innerHeight / 2);
+
+  // save current pos
+  this.mouseX = ev.pageX;
+  this.mouseY = ev.pageY;
+}
+
+getDirection = evt => {
+  let direction = new THREE.Vector3();
+  let mouse = new THREE.Vector2();
+  let origin = new THREE.Vector3();
+  let rayCasterConfig = {origin: origin, direction: direction};
+
+  let bounds = document.body.getBoundingClientRect();
+  // let camera = this.camera;
+  let left;
+  let point;
+  let top;
+
+  this.camera.parent && this.camera.parent.updateMatrixWorld();
+
+  // Calculate mouse position based on the canvas element
+  if (evt.type === 'touchmove' || evt.type === 'touchstart') {
+    // Track the first touch for simplicity.
+    point = evt.touches.item(0);
+  } else {
+    point = evt;
+  }
+
+  left = point.clientX - bounds.left;
+  top = point.clientY - bounds.top;
+  mouse.x = (left / bounds.width) * 2 - 1;
+  mouse.y = -(top / bounds.height) * 2 + 1;
+
+  origin.setFromMatrixPosition(this.camera.matrixWorld);
+  direction.set(mouse.x, mouse.y, 0.5).unproject(this.camera).sub(origin).normalize();
+  return direction;
+  // this.el.setAttribute('raycaster', rayCasterConfig);
+  // if (evt.type === 'touchmove') { evt.preventDefault(); }
+}
+
+update(camera) {
+  this.camera = camera;
+}
+
+destroy() {
+  document.removeEventListener("mousedown", this.handleMouseDown);
+  delete this;
+}
+} -->

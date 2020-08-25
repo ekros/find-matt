@@ -1,0 +1,368 @@
+<html>
+<head>
+<script src="https://js13kgames.com/webxr-src/2020/three.js"></script>
+<style>
+    body { margin: 0; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <script src="VRButton.js"></script>
+  <script src="PickHelper.js"></script>
+  <script src="MessageBox.js"></script>
+  <script type="module">
+        let tick = 0;
+  			let camera, scene, renderer, material;
+        let mouseX = 0, mouseY = 0;
+        const systems = [];
+
+        // game states
+        const GAME_STATES = {
+          IDLE: 0,
+          SCANNING: 1
+        };
+
+        let gameState;
+
+        // starship
+        let starship;
+        let starshipDirection;
+        let speed = 0;
+        const accel = 0.002;
+        const topSpeed = 1;
+        let destinationObject;
+        let distanceToDestination;
+        let orbitingSystemId;
+
+        let pickHelper;
+        let selectedObject;
+
+        let message;
+        let scanProgress = 0;
+
+
+  			init();
+  			animate();
+
+  			function init() {
+
+  				scene = new THREE.Scene();
+          scene.fog = new THREE.FogExp2( 0x000000, 0.001 );
+
+
+          // our starship
+          starship = new THREE.Object3D();
+          scene.add(starship);
+
+
+
+  				camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.1, 2000 );
+  				// camera.position.set( 0, 1.6, 1000 );
+          starship.position.set(0, 1.6, 0);
+          starship.add(camera);
+
+          pickHelper = new PickHelper(camera);
+          // our pointer
+          // var geometry = new THREE.BufferGeometry();
+          // var sprite = new THREE.TextureLoader().load( 'sprites/disc.png' );
+          // material = new THREE.PointsMaterial( { size: 1, sizeAttenuation: true, alphaTest: 0.5, transparent: false } );
+          // material.color.setHSL( 1.0, 0.3, 0.7 );
+          //
+          // pointer = new THREE.Points( geometry, material );
+          // pointer.
+          // camera.add(pointer);
+
+  				//
+
+          var geometry = new THREE.BufferGeometry();
+
+          var sprite = new THREE.TextureLoader().load( 'sprites/disc.png' );
+
+          let vectors = [];
+
+          for ( var i = 0; i < 5000; i ++ ) {
+
+            var x = 2000 * Math.random() - 1000;
+            var y = 2000 * Math.random() - 1000;
+            var z = 2000 * Math.random() - 1000;
+
+            const mattIsHere = i === 1;
+
+            // vectors.push( x, y, z );
+            // systems.push({ vector: { x, y, z }, id: i, mattIsHere })
+
+            const geometry = new THREE.CircleGeometry( 10, 32 );
+            const material = new THREE.MeshBasicMaterial( { color: mattIsHere ? 0x00ff00 : 0xffffff } );
+            const circle = new THREE.Mesh( geometry, material );
+            circle.position.x = x;
+            circle.position.y = y;
+            circle.position.z = z;
+            circle.kind = "system";
+            circle.systemId = i;
+            circle.mattIsHere = mattIsHere;
+            circle.lookAt(starship.position);
+            scene.add( circle );
+          }
+
+
+          // geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( vectors, 3 ) );
+          //
+          //
+          // console.log("systems", systems);
+          //
+          // material = new THREE.PointsMaterial( { size: 25, sizeAttenuation: true, map: sprite, alphaTest: 0.5, transparent: true } );
+          // material.color.setHSL( 0.5, 1, 0.5 );
+          //
+          // var particles = new THREE.Points( geometry, material );
+          // scene.add( particles );
+
+          //
+
+          renderer = new THREE.WebGLRenderer();
+          renderer.setPixelRatio( window.devicePixelRatio );
+          renderer.setSize( window.innerWidth, window.innerHeight );
+          renderer.xr.enabled = true;
+          // renderer.xr.setReferenceSpaceType( 'local' );
+          document.body.appendChild( renderer.domElement );
+          document.body.appendChild(VRButton.createButton(renderer));
+
+  				//
+
+  				window.addEventListener( 'resize', onWindowResize, false );
+
+  				//
+
+  				if ( typeof TESTING !== 'undefined'  ) { for ( var i = 0; i < 200; i ++ ) { render(); } };
+
+  			}
+
+  			function onWindowResize() {
+
+  				camera.aspect = window.innerWidth / window.innerHeight;
+  				camera.updateProjectionMatrix();
+
+  				renderer.setSize( window.innerWidth, window.innerHeight );
+
+  			}
+
+  			function animate() {
+
+  				renderer.setAnimationLoop( render );
+
+          render();
+  			}
+
+        function goTo(selectedObject) {
+          speed = 0.1;
+          starshipDirection = new THREE.Vector3(selectedObject.position.x - starship.position.x,
+            selectedObject.position.y - starship.position.y,
+            selectedObject.position.z - starship.position.z);
+          starshipDirection = starshipDirection.normalize();
+          destinationObject = selectedObject;
+        }
+
+        function scanSystem(system) {
+          gameState = GAME_STATES.SCANNING;
+          message = new MessageBox(scene, camera);
+        }
+
+  			function render() {
+          let time = Date.now() * 0.00005;
+
+  				// camera.position.x += ( mouseX - camera.position.x ) * 0.05;
+  				// camera.position.y += ( - mouseY - camera.position.y ) * 0.05;
+
+          // move starship forward
+          if (speed > 0) {
+            // let direction = new THREE.Vector3(0, 0, 0);
+            // camera.getWorldDirection(direction);
+            starship.position.x += starshipDirection.x * speed;
+            starship.position.y += starshipDirection.y * speed;
+            starship.position.z += starshipDirection.z * speed;
+
+
+            // acceleration and slow down
+            if (distanceToDestination && distanceToDestination < 300) {
+              speed -= accel * 2;
+            } else if (speed < topSpeed) {
+              speed += accel;
+            }
+
+            // TODO-ING: the goTo func continues to execute so I never stop!!
+            // I need an extra state like the system id the starship is orbiting (so it doesn't triggers it again)
+
+            if (speed < 0 || distanceToDestination < 50) { // just in case
+              speed = 0;
+              orbitingSystemId = destinationObject.systemId;
+              scanSystem(destinationObject);
+            }
+
+            // update distance every 10 ticks
+            if (tick % 10 === 0) {
+              console.log("speed", speed);
+              distanceToDestination = Math.sqrt(Math.pow(destinationObject.position.x - starship.position.x, 2) +
+              Math.pow(destinationObject.position.y - starship.position.y, 2) +
+              Math.pow(destinationObject.position.z - starship.position.z, 2));
+              console.log("Remaining distance", distanceToDestination);
+            }
+
+            // rotate systems to look the starship
+            const systems = scene.children.filter(obj => obj.kind === "system");
+            systems.forEach(system => {
+              system.lookAt(starship.position);
+            });
+          }
+
+          // scanning
+          if (gameState === GAME_STATES.SCANNING) {
+            // TODO-ING: progress passin 100%%
+            // then the system is marked as visited (later you can collect resources)
+            scanProgress += 0.1;
+            message.render(`SCANNING...${scanProgress.toFixed(1)}%`);
+            if (scanProgress >= 100) {
+              gameState = null;
+              scanProgress = 0;
+              // let's reveal what is in this system
+              if (!destinationObject.mattIsHere) {
+                message.render("Not found");
+                destinationObject.material.color.setHSL( 0, 1, 0.7 );
+                setTimeout(() => {
+                  message.destroy();
+                }, 2000);
+              } else {
+                // win condition. Matt is here
+                console.log("WIN!");
+              }
+            }
+          }
+
+          // pick objects
+          selectedObject = pickHelper.pick({x: 0, y: 0}, scene, camera, time);
+          if (selectedObject && speed === 0 && selectedObject.systemId !== orbitingSystemId) {
+
+            // console.log(selectedObject)
+            selectedObject.material.color.setHSL( 0.5, 1, 0.5 );
+            goTo(selectedObject);
+          }
+  				// starship.lookAt( scene.position );
+
+  				// var h = ( 360 * ( 1.0 + time ) % 360 ) / 360;
+  				// material.color.setHSL( h, 0.5, 0.5 );
+
+  				renderer.render( scene, camera );
+          tick += 1;
+  			}
+      </script>
+</body>
+</html>
+
+<!-- class MouseControl {
+constructor(camera, instanceId, sensitivity = 4) {
+  console.log(`%c${instanceId}`, "background:green;color:white;");
+  console.log(`%c${camera}`, "background:blue;color:white;");
+  this.instanceId = instanceId;
+  this.camera = camera;
+  this.sensitivity = sensitivity;
+
+  console.log("camera", camera);
+  this.lookAt = {x: 0, y: 0, z: 0};
+  this.mouseX = 0;
+  this.mouseY = 0;
+  this.previousDirection = {
+    x: 0,
+    y: 0,
+    z: 0
+  };
+  document.addEventListener("mousedown", this.handleMouseDown);
+}
+
+handleMouseDown = ev => {
+  // console.log("mousedown", this.camera.rotation);
+  document.addEventListener("mousemove", this.handleMouseMove);
+  document.addEventListener("mouseup", this.handleMouseUp);
+  document.body.style.cursor = "grabbing";
+  this.mouseX = 0;
+  this.mouseY = 0;
+}
+
+handleMouseUp = ev => {
+  console.log("mouseup", this.instanceId);
+  document.removeEventListener("mousemove", this.handleMouseMove);
+  document.removeEventListener("mouseup", this.handleMouseUp);
+  document.body.style.cursor = "default";
+  this.previousDirection = {
+    x: 0,
+    y: 0,
+    z: 0
+  }
+}
+
+handleMouseMove = ev => { // TODO: camera direction is being set using absolute position, not relative.
+  // this.camera.lookAt(this.camera.rotation.x, this.camera.rotation.y, this.camera.rotation.z + 0.01);
+  // const deltaX = ev.pageX - this.mouseX;
+  // const deltaY = ev.pageY - this.mouseY;
+  // console.log("x", deltaX);
+  // console.log("y", deltaY);
+
+
+  const direction = this.getDirection(ev);
+  this.lookAt.x += (direction.x - this.previousDirection.x) * this.sensitivity;
+  this.lookAt.y += (direction.y - this.previousDirection.y) * this.sensitivity;
+  this.lookAt.z += (direction.z - this.previousDirection.z) * this.sensitivity;
+
+  this.previousDirection = direction;
+
+  // this.lookAt.x += deltaX * 0.005;
+  // this.lookAt.y += deltaY * 0.005;
+
+  // this.lookAt.x += ev.pageX - (window.innerWidth / 2);
+  // this.lookAt.y += ev.pageY - (window.innerHeight / 2);
+
+  // save current pos
+  this.mouseX = ev.pageX;
+  this.mouseY = ev.pageY;
+}
+
+getDirection = evt => {
+  let direction = new THREE.Vector3();
+  let mouse = new THREE.Vector2();
+  let origin = new THREE.Vector3();
+  let rayCasterConfig = {origin: origin, direction: direction};
+
+  let bounds = document.body.getBoundingClientRect();
+  // let camera = this.camera;
+  let left;
+  let point;
+  let top;
+
+  this.camera.parent && this.camera.parent.updateMatrixWorld();
+
+  // Calculate mouse position based on the canvas element
+  if (evt.type === 'touchmove' || evt.type === 'touchstart') {
+    // Track the first touch for simplicity.
+    point = evt.touches.item(0);
+  } else {
+    point = evt;
+  }
+
+  left = point.clientX - bounds.left;
+  top = point.clientY - bounds.top;
+  mouse.x = (left / bounds.width) * 2 - 1;
+  mouse.y = -(top / bounds.height) * 2 + 1;
+
+  origin.setFromMatrixPosition(this.camera.matrixWorld);
+  direction.set(mouse.x, mouse.y, 0.5).unproject(this.camera).sub(origin).normalize();
+  return direction;
+  // this.el.setAttribute('raycaster', rayCasterConfig);
+  // if (evt.type === 'touchmove') { evt.preventDefault(); }
+}
+
+update(camera) {
+  this.camera = camera;
+}
+
+destroy() {
+  document.removeEventListener("mousedown", this.handleMouseDown);
+  delete this;
+}
+} -->
