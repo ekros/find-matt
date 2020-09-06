@@ -10,7 +10,7 @@ class PickHelper {
 
       const cursor = this.getCursor();
       this.camera.add(cursor);
-      cursor.position.z = -1;
+      cursor.position.z = -1.5;
       const scale = 0.05;
       cursor.scale.set(scale, scale, scale);
       this.cursor = cursor;
@@ -94,7 +94,7 @@ class PickHelper {
         // console.log("intersection!!");
         // pick the first object. It's the closest one
         this.pickedObject = intersectedObjects[0].object;
-        
+
         // if we're looking at the same object as before
         // increment time select timer
         if (this.pickedObject && lastPickedObject === this.pickedObject && !this.selected) {

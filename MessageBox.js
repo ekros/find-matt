@@ -1,9 +1,11 @@
 class MessageBox {
-    constructor(scene, camera, position, size = {width: 40, height: 25}) {
+    constructor(scene, camera, position, size = {width: 60, height: 25}) {
         this.scene = scene;
         this.canvas = document.createElement("canvas");
-        this.cameraPosition = camera.position;
+        this.cameraPosition = position;
         this.size = size;
+        this.pages = undefined;
+        this.pageCursor = 0;
 
         // set default position in front of the camera
         const raycaster = new THREE.Raycaster();
@@ -15,8 +17,8 @@ class MessageBox {
         raycaster.ray.at(45, target);
         console.log("target", target);
 
-        this.position = position || { x: target.x, y: target.y, z: target.z };
-        const { x, y, z } = this.position;
+        this.boxPosition = { x: target.x, y: target.y, z: target.z };
+        const { x, y, z } = this.boxPosition;
         const { width, height } = this.size;
         let geometry = new THREE.PlaneGeometry( width, height);
         this.material = new THREE.MeshBasicMaterial( {color: 0x444444, side: THREE.DoubleSide} );
@@ -29,15 +31,25 @@ class MessageBox {
         this.plane = new THREE.Mesh( geometry, this.material );
         console.log("y", y);
         this.plane.position.x = x;
-        this.plane.position.y = y - 25;
+        this.plane.position.y = y - 50;
         this.plane.position.z = z;
+        this.plane.kind = "message";
 
-        this.plane.lookAt(this.cameraPosition);
+        this.plane.lookAt(position);
 
         this.scene.add( this.plane );
     }
 
-    render(text) {
+    render(pages) {
+      console.log("render pages", pages);
+      if (!this.pages) {
+        this.pages = typeof (pages) === "string" ? [pages] : pages;
+      }
+      if (this.pages && typeof (pages) === "string") {
+        this.pages = [pages];
+      }
+      const text = this.pages[this.pageCursor];
+      console.log("text", text);
       const ctx = this.canvas.getContext( '2d' );
         // console.log("render message box");
 
@@ -63,7 +75,42 @@ class MessageBox {
       this.material.map.needsUpdate = true;
     }
 
+    autoNext() {
+      return new Promise(resolve => {
+        const interval = setInterval(() => {
+          console.log("interval");
+          if(!this.next()) {
+            clearInterval(interval);
+            resolve();
+          }
+        }, 2000);
+      })
+    }
+
+    next() {
+      if (this.pages) {
+        console.log("next", this.pages);
+        console.log("this.pages", this.pages);
+        this.pageCursor += 1;
+        console.log("this.pageCursor", this.pageCursor);
+        if (this.pageCursor === this.pages.length) {
+          this.destroy();
+          return false;
+        } else {
+          console.log("this.pages[this.pageCursor]", this.pages[this.pageCursor]);
+          this.render();
+          return true;
+        }
+      }
+    }
+
+    reset() {
+      this.pages = undefined;
+      this.pageCursor = 0;
+    }
+
     destroy() {
+      this.reset();
       this.scene.remove(this.plane);
     }
 }
