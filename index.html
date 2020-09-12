@@ -11,17 +11,19 @@
   <script src="PickHelper.js"></script>
   <script src="MessageBox.js"></script>
   <script src="Enemy.js"></script>
+  <script src="MattStarship.js"></script>
   <script type="module">
         let tick = 0;
-  			let camera, scene, renderer, material;
+  			let camera, renderer, material;
+        let scene = new THREE.Scene();
         let mouseX = 0, mouseY = 0;
-        const systems = [];
 
         // game states
         const GAME_STATES = {
           IDLE: 0,
           SCANNING: 1,
-          PAUSED: 2
+          PAUSED: 2,
+          GAME_OVER: 3
         };
 
         // game progress
@@ -33,10 +35,10 @@
           FIND_THIRD_BEACON: 4,
           CROSS_PLAGUE_TERRITORY: 5,
           ANCIENT_CIV: 6,
-          WORM_HOLE: 7,
+          CHASING_MATT: 7,
           END: 8
         };
-        let gameProgress = GAME_PROGRESS.FIND_THIRD_BEACON;
+        let gameProgress = GAME_PROGRESS.CHASING_MATT;
         let gameState;
         let currentQuestCompleted = false;
         let scansBeforeNextEvent; // systems the player needs to scan before the next event
@@ -54,6 +56,7 @@
         let enemies = [];
 
         // picking and targets
+        const MAX_INTERACTIVE_DISTANCE = 1500;
         let pickHelper;
         let selectedObject;
         let target; // ex: hint about the next system to visit
@@ -63,6 +66,7 @@
 
         let message;
         let scanProgress = 0;
+        let mattStarship;
 
 
   			init();
@@ -70,7 +74,6 @@
 
   			function init() {
 
-  				scene = new THREE.Scene();
           scene.fog = new THREE.FogExp2( 0x000000, 0.001 );
 
 
@@ -85,34 +88,13 @@
 
           message = new MessageBox(scene, camera, starship.position);
 
-          pickHelper = new PickHelper(camera);
-          // our pointer
-          // var geometry = new THREE.BufferGeometry();
-          // var sprite = new THREE.TextureLoader().load( 'sprites/disc.png' );
-          // material = new THREE.PointsMaterial( { size: 1, sizeAttenuation: true, alphaTest: 0.5, transparent: false } );
-          // material.color.setHSL( 1.0, 0.3, 0.7 );
-          //
-          // pointer = new THREE.Points( geometry, material );
-          // pointer.
-          // camera.add(pointer);
-
-  				//
-
-          // var geometry = new THREE.BufferGeometry();
-
-          // var sprite = new THREE.TextureLoader().load( 'sprites/disc.png' );
-
-          // let vectors = [];
+          pickHelper = new PickHelper(camera, MAX_INTERACTIVE_DISTANCE);
 
           for ( var i = 0; i < 5000; i ++ ) {
 
             var x = 4000 * Math.random() - 2000;
             var y = 4000 * Math.random() - 2000;
             var z = 4000 * Math.random() - 2000;
-
-
-            // vectors.push( x, y, z );
-            // systems.push({ vector: { x, y, z }, id: i, mattIsHere })
 
             const geometry = new THREE.CircleGeometry( 10, 32 );
             const material = new THREE.MeshBasicMaterial();
@@ -126,20 +108,6 @@
             scene.add( circle );
           }
 
-
-          // geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( vectors, 3 ) );
-          //
-          //
-          // console.log("systems", systems);
-          //
-          // material = new THREE.PointsMaterial( { size: 25, sizeAttenuation: true, map: sprite, alphaTest: 0.5, transparent: true } );
-          // material.color.setHSL( 0.5, 1, 0.5 );
-          //
-          // var particles = new THREE.Points( geometry, material );
-          // scene.add( particles );
-
-          //
-
           renderer = new THREE.WebGLRenderer();
           renderer.setPixelRatio( window.devicePixelRatio );
           renderer.setSize( window.innerWidth, window.innerHeight );
@@ -148,15 +116,22 @@
           document.body.appendChild( renderer.domElement );
           document.body.appendChild(VRButton.createButton(renderer));
 
-  				//
-
   				window.addEventListener( 'resize', onWindowResize, false );
-
-  				//
 
   				if ( typeof TESTING !== 'undefined'  ) { for ( var i = 0; i < 200; i ++ ) { render(); } };
 
   			}
+
+        function resetSystem(system) {
+          system.material.color.setHSL( 0, 0, 1 );
+          system.inSearchArea = false;
+          system.inDangerArea = false,
+          system.isVisited = false;
+        }
+
+        function restartGame() {
+          location.reload();
+        }
 
   			function onWindowResize() {
 
@@ -194,6 +169,10 @@
           system.material.color.setHSL( h, s, l );
           system.inDangerArea = true;
         }
+        function setTarget(system) {
+          system.isNextTarget = true;
+          attachTargetSprite(system);
+        }
         function unsetSystemInSearchArea(system) {
           system.material.color.setHSL( 0, 0, 1 );
           system.inSearchArea = false;
@@ -201,6 +180,10 @@
         function unsetSystemInDangerArea(system) {
           system.material.color.setHSL( 0, 0, 1 );
           system.inDangerArea = false;
+        }
+        function unsetTarget(system) {
+          system.isNextTarget = false;
+          detachTargetSprite(system);
         }
 
         function goTo(selectedObject) {
@@ -225,14 +208,7 @@
         function getNearSystems(center, distance) {
           const v1 = new THREE.Vector3(center.x, center.y, center.z);
           const systems = getAllSystems();
-          const nearSystems = [];
-          systems.forEach(s => {
-            const d = v1.distanceTo(new THREE.Vector3(s.position.x, s.position.y, s.position.z));
-            if (d <= distance) {
-              nearSystems.push(s);
-            }
-          });
-          return nearSystems;
+          return systems.filter(s => v1.distanceTo(new THREE.Vector3(s.position.x, s.position.y, s.position.z)) <= distance);
         }
 
         function getRandomSystemInFront(distance) {
@@ -260,7 +236,12 @@
           const geometry = new THREE.RingGeometry( 20, 22, 32 );
           const material = new THREE.MeshBasicMaterial( { color: 0xffff00, side: THREE.DoubleSide } );
           const ring = new THREE.Mesh( geometry, material );
+          ring.kind = "indicator";
           target.add( ring );
+        }
+
+        function detachTargetSprite(target) {
+          target.remove(target.children.find(c => c.kind === "indicator"));
         }
 
         function setDangerArea(center, radius, hsl) {
@@ -285,9 +266,34 @@
           searchAreaCenter = undefined;
         }
 
+        function clearDangerArea() {
+          const allSystems = getAllSystems();
+          allSystems.forEach(s => {
+            unsetSystemInDangerArea(s);
+          });
+        }
+
         function addRandomEnemy() {
-          const randomNearSystem = getNearSystems(starship.position, 500)[0];
-          const enemy = new Enemy(randomNearSystem, scene, starship.position);
+          const nearSystems = getNearSystems(starship.position, 500);
+          const randomNearSystem = nearSystems[Math.floor(Math.random()*nearSystems.length)-1];
+          enemies.push(new Enemy(randomNearSystem, scene, starship.position, () => {
+            message.render("Game Over");
+            gameState = GAME_STATES.GAME_OVER;
+          }));
+          console.log("enemies", enemies);
+        }
+
+        function addMattStarship() {
+          const nearSystems = getNearSystems(starship.position, 500);
+          const randomNearSystem = nearSystems[Math.floor(Math.random()*nearSystems.length)-1];
+          mattStarship = new MattStarship(randomNearSystem, scene, starship.position, () => {
+            message.destroy();
+            scanProgress = 0; // reset any current scanning
+            console.log(`%cMATT`, "background:blue;color:white;");
+            message = new MessageBox(scene, camera, starship.position);
+            message.render(["I finally managed to\nintercept Matt's starship. He looked surprised.", "- I was losing hope - he said.\n- But now I'm sure we\nwill be successful\nin our mission", "- I went across a thousand\nstars for you - I said.", "- Then let's find The Paradise together", "My paradise is wherever you are.", "THE END"]);
+            gameState = GAME_STATES.GAME_OVER;
+          });
         }
 
   			function render() {
@@ -295,7 +301,6 @@
 
   				// camera.position.x += ( mouseX - camera.position.x ) * 0.05;
   				// camera.position.y += ( - mouseY - camera.position.y ) * 0.05;
-
           switch(gameProgress) {
             case GAME_PROGRESS.FOLLOW_MATT_ITINERARY:
               if (gameState !== GAME_STATES.PAUSED) {
@@ -308,17 +313,15 @@
             case GAME_PROGRESS.FIND_FIRST_BEACON:
               if (!target) {
                 target = getRandomSystemInFront();
-                target.isNextTarget = true;
-                attachTargetSprite(target);
+                setTarget(target);
               } else if (currentQuestCompleted) {
                 gameState = GAME_STATES.PAUSED;
                 message.render(["I've detected a signal...\nIt's a beacon...", "...but it doesn't contain any message.\nWhy?", "And where is Matt?\nOur new home is here...\nBut, wait.", "It has been devastated.\nThe Plague did this.\nI'm sure.", "If they are here, our home planet\nwill be destroyed within months,\nmaybe weeks.", "I must evade their ships, or I'm dead.", "I can calculate Matt's route\nbased on the beacon orientation.\n", "It's a risky guess\n but it's the only thing I have", "I only need to check\nthe dozens of systems\nin that sector.\nGood luck Amy..."]);
                 currentQuestCompleted = false;
                 gameProgress += 1;
-                target.isNextTarget = false;
+                unsetTarget(target);
                 setVisited(target);
                 target = undefined;
-                // TODO: remove the target ring
               }
             break;
             case GAME_PROGRESS.MEET_THE_PLAGUE:
@@ -354,7 +357,6 @@
                 searchAreaCenter = getRandomSystemInFront(1000);
                 setSearchArea(searchAreaCenter.position, 500);
               }
-              currentQuestCompleted = true; // TODO: remove this. Just a bypass for now
               if (currentQuestCompleted) {
                 console.log("FIND THIRD BEACON COMPLETED");
                 gameState = GAME_STATES.PAUSED;
@@ -366,23 +368,70 @@
             break;
             case GAME_PROGRESS.CROSS_PLAGUE_TERRITORY:
             if (!searchAreaCenter) {
-              addRandomEnemy(); // TODO: add multiple enemies here
+              addRandomEnemy();
+              addRandomEnemy();
+              addRandomEnemy();
               scansBeforeNextEvent = 2;
               searchAreaCenter = getRandomSystemInFront(700);
               setDangerArea(searchAreaCenter.position, 500);
               searchAreaCenter = getRandomSystemInFront(1600);
               setSearchArea(searchAreaCenter.position, 400);
             }
+            if (currentQuestCompleted) {
+              // for the ancient civ you could add a new mechanic or a variation
+              gameState = GAME_STATES.PAUSED;
+              message.render(["I found another beacon.\nIf my calculations are correct\nthis is Matt's last beacon.", "It says that he received a strange signal from a system far away"]);
+              currentQuestCompleted = false;
+              gameProgress += 1;
+              clearSearchArea();
+              clearDangerArea();
+            }
             break;
             case GAME_PROGRESS.ANCIENT_CIV:
+            if (!target) {
+              target = getRandomSystemInFront(1500);
+              setTarget(target);
+            } else if (currentQuestCompleted) {
+              gameState = GAME_STATES.PAUSED;
+              message.render(["This is incredible...\nThere is an ancient civilization here.", "They have a sort of\ntelepathy ability they use to\ncomunicate with me.", "They were once an galactic civilization,\nuntil they were decimated by The Plague", "They planned to flee to a legendary planet\ncalled 'The Paradise'.\nBut they never could\nfind it.", "For my surprise, they\nrevealed me that\nthey had another visitor\njust some days ago", "It means that he is not far from here."]);
+              currentQuestCompleted = false;
+              gameProgress += 1;
+              unsetTarget(target);
+            }
             break;
-            case GAME_PROGRESS.WORM_HOLE:
+            case GAME_PROGRESS.CHASING_MATT:
+            if (!searchAreaCenter) {
+              addRandomEnemy();
+              scansBeforeNextEvent = 3;
+              searchAreaCenter = getRandomSystemInFront(0);
+              setSearchArea(searchAreaCenter.position, 400);
+            }
+            // currentQuestCompleted = true; // TODO: remove this. Just a bypass for now
+            if (currentQuestCompleted) {
+              gameState = GAME_STATES.PAUSED;
+              message.render(["I detected another signal today.\nBut this time is not a beacon.", "It's Matt's starship!\nI must hurry!"]);
+              currentQuestCompleted = false;
+              gameProgress += 1;
+              clearSearchArea();
+              addMattStarship();
+            }
             break;
             case GAME_PROGRESS.END:
-            break;
             default:
             break;
           }
+
+          // run a AI cycle for enemies/matt
+          if (tick % 40 === 0 && gameState !== GAME_STATES.PAUSED && gameState !== GAME_STATES.GAME_OVER) {
+            // console.log("tick", tick);
+            enemies.forEach(e => {
+              e.think();
+            });
+            if (mattStarship) {
+              mattStarship.think();
+            }
+          }
+
           // move starship forward
           if (speed > 0) {
             // let direction = new THREE.Vector3(0, 0, 0);
@@ -400,6 +449,12 @@
             }
 
             if (speed < 0 || distanceToDestination < 50) { // just in case
+              enemies.forEach(e => {
+                e.setOrbitingSystemId(destinationObject.systemId);
+              });
+              if (mattStarship) {
+                mattStarship.setOrbitingSystemId(destinationObject.systemId);
+              }
               speed = 0;
               orbitingSystemId = destinationObject.systemId;
               scanSystem(destinationObject);
@@ -414,6 +469,7 @@
               console.log("Remaining distance", distanceToDestination);
             }
 
+
             // rotate systems to look the starship
             const systems = getAllSystems();
             systems.forEach(system => {
@@ -423,14 +479,17 @@
 
           // scanning
           if (gameState === GAME_STATES.SCANNING) {
-            scanProgress += 0.5;
+            scanProgress += 0.7;
             message.render(`SCANNING...${scanProgress.toFixed(0)}%`);
             if (scanProgress >= 100) {
               message.reset();
               gameState = GAME_STATES.IDLE;
               scanProgress = 0;
               // let's reveal what is in this system
-              if (!destinationObject.isNextTarget) {
+              if (destinationObject.inDangerArea) {
+                message.render("This is the last entry in my log\nThe Plague caught me\nMatt, forgive me.");
+                gameState = GAME_STATES.GAME_OVER;
+              } else if (!destinationObject.isNextTarget) {
                 // TODO: you could collect items if any
                 console.log("[1] scansBeforeNextEvent", scansBeforeNextEvent);
                 setVisited(destinationObject);
@@ -445,7 +504,7 @@
                   message.render("Nothing found");
                   setTimeout(() => {
                     message.destroy();
-                  }, 2000);
+                  }, 1500);
                 }
               } else {
                 message.reset();
@@ -454,31 +513,33 @@
             }
           }
 
-          // pick objects
-          selectedObject = pickHelper.pick({x: 0, y: 0}, scene, camera, time);
-          // if (!selectedObject && lockSelection) {
-          //   enableSelection = true;
-          // }
-          // console.log("selectedObject", selectedObject);
-          if (!lockSelection) {
+          const selectedObject = pickHelper.pick({x: 0, y: 0}, scene, camera, time);
 
-            console.group("1");
-            console.log("selectedObject", selectedObject);
-            console.log("gameState", gameState);
-            console.groupEnd("1");
-          }
+          // TODO-ING: use the selected boolean to render the message box
+
+          // if (!lockSelection) {
+          //   console.group("1");
+          //   console.log("selectedObject", selectedObject);
+          //   console.log("gameState", gameState);
+          //   console.groupEnd("1");
+          // }
           if (selectedObject && speed === 0 && selectedObject.systemId !== orbitingSystemId &&
             gameState !== GAME_STATES.PAUSED && selectedObject.kind === "system" && !selectedObject.isVisited) {
 
             // console.log(selectedObject)
             selectedObject.material.color.setHSL( 0.7, 1, 0.8 );
             goTo(selectedObject);
-          } else if (selectedObject && gameState === GAME_STATES.PAUSED && selectedObject.kind === "message" && !lockSelection) {
+          } else if (selectedObject && (gameState === GAME_STATES.PAUSED || gameState === GAME_STATES.GAME_OVER) &&
+            selectedObject.kind === "message" && !lockSelection) {
             console.log("autoNext");
             message.autoNext()
             .then(() => {
-              console.log("finish yeeeeeaaahhh!");
-              gameState = GAME_STATES.IDLE;
+              if (gameState === GAME_STATES.GAME_OVER) {
+                restartGame();
+              } else {
+                console.log("go idle");
+                gameState = GAME_STATES.IDLE;
+              }
             });
             // console.log("lockSelection", lockSelection);
             // if (!lockSelection && !message.next()) {
@@ -491,7 +552,6 @@
             // enableSelection = false;
           } else {
             lockSelection = false;
-            console.log("lockSelection", lockSelection);
           }
   				// starship.lookAt( scene.position );
 
@@ -504,114 +564,3 @@
       </script>
 </body>
 </html>
-
-<!-- class MouseControl {
-constructor(camera, instanceId, sensitivity = 4) {
-  console.log(`%c${instanceId}`, "background:green;color:white;");
-  console.log(`%c${camera}`, "background:blue;color:white;");
-  this.instanceId = instanceId;
-  this.camera = camera;
-  this.sensitivity = sensitivity;
-
-  console.log("camera", camera);
-  this.lookAt = {x: 0, y: 0, z: 0};
-  this.mouseX = 0;
-  this.mouseY = 0;
-  this.previousDirection = {
-    x: 0,
-    y: 0,
-    z: 0
-  };
-  document.addEventListener("mousedown", this.handleMouseDown);
-}
-
-handleMouseDown = ev => {
-  // console.log("mousedown", this.camera.rotation);
-  document.addEventListener("mousemove", this.handleMouseMove);
-  document.addEventListener("mouseup", this.handleMouseUp);
-  document.body.style.cursor = "grabbing";
-  this.mouseX = 0;
-  this.mouseY = 0;
-}
-
-handleMouseUp = ev => {
-  console.log("mouseup", this.instanceId);
-  document.removeEventListener("mousemove", this.handleMouseMove);
-  document.removeEventListener("mouseup", this.handleMouseUp);
-  document.body.style.cursor = "default";
-  this.previousDirection = {
-    x: 0,
-    y: 0,
-    z: 0
-  }
-}
-
-handleMouseMove = ev => { // TODO: camera direction is being set using absolute position, not relative.
-  // this.camera.lookAt(this.camera.rotation.x, this.camera.rotation.y, this.camera.rotation.z + 0.01);
-  // const deltaX = ev.pageX - this.mouseX;
-  // const deltaY = ev.pageY - this.mouseY;
-  // console.log("x", deltaX);
-  // console.log("y", deltaY);
-
-
-  const direction = this.getDirection(ev);
-  this.lookAt.x += (direction.x - this.previousDirection.x) * this.sensitivity;
-  this.lookAt.y += (direction.y - this.previousDirection.y) * this.sensitivity;
-  this.lookAt.z += (direction.z - this.previousDirection.z) * this.sensitivity;
-
-  this.previousDirection = direction;
-
-  // this.lookAt.x += deltaX * 0.005;
-  // this.lookAt.y += deltaY * 0.005;
-
-  // this.lookAt.x += ev.pageX - (window.innerWidth / 2);
-  // this.lookAt.y += ev.pageY - (window.innerHeight / 2);
-
-  // save current pos
-  this.mouseX = ev.pageX;
-  this.mouseY = ev.pageY;
-}
-
-getDirection = evt => {
-  let direction = new THREE.Vector3();
-  let mouse = new THREE.Vector2();
-  let origin = new THREE.Vector3();
-  let rayCasterConfig = {origin: origin, direction: direction};
-
-  let bounds = document.body.getBoundingClientRect();
-  // let camera = this.camera;
-  let left;
-  let point;
-  let top;
-
-  this.camera.parent && this.camera.parent.updateMatrixWorld();
-
-  // Calculate mouse position based on the canvas element
-  if (evt.type === 'touchmove' || evt.type === 'touchstart') {
-    // Track the first touch for simplicity.
-    point = evt.touches.item(0);
-  } else {
-    point = evt;
-  }
-
-  left = point.clientX - bounds.left;
-  top = point.clientY - bounds.top;
-  mouse.x = (left / bounds.width) * 2 - 1;
-  mouse.y = -(top / bounds.height) * 2 + 1;
-
-  origin.setFromMatrixPosition(this.camera.matrixWorld);
-  direction.set(mouse.x, mouse.y, 0.5).unproject(this.camera).sub(origin).normalize();
-  return direction;
-  // this.el.setAttribute('raycaster', rayCasterConfig);
-  // if (evt.type === 'touchmove') { evt.preventDefault(); }
-}
-
-update(camera) {
-  this.camera = camera;
-}
-
-destroy() {
-  document.removeEventListener("mousedown", this.handleMouseDown);
-  delete this;
-}
-} -->

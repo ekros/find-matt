@@ -1,20 +1,22 @@
 class Enemy {
-  constructor(orbitingSystem, scene, starshipPosition) {
+  constructor(orbitingSystem, scene, starshipPosition, gameOverCallback, options) {
     console.log("orbitingSystem.rotation", orbitingSystem.rotation);
     this.inTransitToSystem;
     this.position = orbitingSystem.position;
     this.orbitingSystem = orbitingSystem;
-    this.speed = 0;
-    this.detectionChance = 0.01; // detection chance of the player in every think() call
+    this.speed = options && options.speed || 10;
+    this.direction;
+    this.directionLine;
     this.scene = scene;
     this.starshipPosition = starshipPosition;
+    this.gameOverCallback = gameOverCallback;
+    this.options = options;
 
     // render
     const geometry = new THREE.ConeGeometry( 5, 20, 32 );
-    const material = new THREE.MeshBasicMaterial( {color: 0xff0000} );
+    const material = new THREE.MeshBasicMaterial( {color: options && options.color || 0xff0000} );
     const cone = new THREE.Mesh( geometry, material );
 
-    // TODO-ING: calculate enemy position from system-camera ray
     const raycaster = new THREE.Raycaster();
     const { x: x1, y: y1, z: z1 } = this.starshipPosition;
     const { x: x2, y: y2, z: z2 } = this.orbitingSystem.position;
@@ -30,25 +32,8 @@ class Enemy {
     console.log("v2", v2);
 
     const distance = v1.distanceTo(v2);
-    console.log("distance", distance);
     enemyDirection.applyAxisAngle(new THREE.Vector3(1, 0, 0), 0.02);
     raycaster.set(v1, enemyDirection);
-
-    // TODO: remove this section!!! only used to draw the line
-    // Draw a line from pointA in the given direction at distance 100
-    // const pointA = v1;
-    // const direction = enemyDirection;
-    // direction.normalize();
-    // const dist = distance; // at what dist to determine pointB
-    // const pointB = new THREE.Vector3();
-    // pointB.addVectors ( pointA, direction.multiplyScalar( dist ) );
-    // const geo = new THREE.Geometry();
-    // geo.vertices.push( pointA );
-    // geo.vertices.push( pointB );
-    // const mat = new THREE.LineBasicMaterial( { color : 0xff0000 } );
-    // const line = new THREE.Line( geo, mat );
-    // scene.add( line );
-    // *****************************
 
     let target = new THREE.Vector3();
     raycaster.ray.at(distance, target);
@@ -57,24 +42,69 @@ class Enemy {
     cone.position.x = target.x;
     cone.position.y = target.y;
     cone.position.z = target.z;
+    cone.kind = options && options.kind || "enemy";
+    this.object3D = cone;
     this.scene.add( cone );
   }
 
   goTo() {
-    // here we set the distance and the
+    const v1 = new THREE.Vector3(this.object3D.position.x, this.object3D.position.y, this.object3D.position.z);
+    // look for a near system to go
+    this.inTransitToSystem = this.scene.children.find(obj => {
+      if (this.inTransitToSystem.uuid === obj.uuid) {
+        return null;
+      }
+    const maxDistance = this.options && this.options.maxDistance || 700;
+    return obj.kind === "system" &&
+    v1.distanceTo(new THREE.Vector3(obj.position.x, obj.position.y, obj.position.z)) > 50 &&
+    v1.distanceTo(new THREE.Vector3(obj.position.x, obj.position.y, obj.position.z)) < maxDistance
+    });
+    console.log("%cnew direction", "background:black;color:white");
+    console.log("inTransitToSystem", this.inTransitToSystem);
+    const direction = new THREE.Vector3(this.inTransitToSystem.position.x - this.object3D.position.x,
+      this.inTransitToSystem.position.y - this.object3D.position.y,
+      this.inTransitToSystem.position.z - this.object3D.position.z);
+      console.log("direction", direction);
+    this.direction = direction.normalize();
+    console.log("this.direction", this.direction);
+    // add direction line
+    const geo = new THREE.Geometry();
+    geo.vertices.push(v1);
+    geo.vertices.push(new THREE.Vector3(this.inTransitToSystem.position.x, this.inTransitToSystem.position.y, this.inTransitToSystem.position.z));
+    const mat = new THREE.LineBasicMaterial( { color : this.options && this.options.directionColor || 0x550000 } );
+    this.directionLine = new THREE.Line( geo, mat );
+    this.scene.add( this.directionLine );
   }
 
   move() {
-    // add speed to current position
+    this.object3D.position.x += this.direction.x * this.speed;
+    this.object3D.position.y += this.direction.y * this.speed;
+    this.object3D.position.z += this.direction.z * this.speed;
+// console.log("this.object3D", this.object3D.position);
+    const v1 = new THREE.Vector3(this.object3D.position.x, this.object3D.position.y, this.object3D.position.z);
+    const { x: posX, y: posY, z: posZ } = this.inTransitToSystem.position;
+    if (v1.distanceTo(new THREE.Vector3(posX, posY, posZ)) < 50) {
+      if (this.inTransitToSystem.systemId === this.orbitingSystemId) {
+        this.gameOverCallback();
+      }
+      this.scene.remove(this.directionLine);
+      this.goTo();
+    }
   }
 
   think() {
     // here is the "AI" logic
     // this method is called every N ticks
-    if (inTransitToSystem) {
+    if (this.inTransitToSystem) {
       this.move();
     } else {
-      // it moves randomly from system to system unless it detects the player
+      console.log("thinking...");
+      this.inTransitToSystem = {};
+      this.goTo();
     }
+  }
+
+  setOrbitingSystemId(orbitingSystemId) {
+    this.orbitingSystemId = orbitingSystemId;
   }
 }

@@ -2,11 +2,12 @@
 
 // TODO: clean unneeded mouse control code
 class PickHelper {
-    constructor(camera) {
+    constructor(camera, maxInteractiveDistance) {
       this.raycaster = new THREE.Raycaster();
       this.pickedObject = null;
       this.pickedObjectSavedColor = 0;
       this.camera = camera;
+      this.maxInteractiveDistance = maxInteractiveDistance;
 
       const cursor = this.getCursor();
       this.camera.add(cursor);
@@ -95,9 +96,15 @@ class PickHelper {
         // pick the first object. It's the closest one
         this.pickedObject = intersectedObjects[0].object;
 
+        // only pick if is nearer than the maximum distance.
+        // this ensures objects behind the fog are not selected
+        const v1 = new THREE.Vector3(this.camera.position.x, this.camera.position.y, this.camera.position.z);
+        console.log("distanceTo", v1.distanceTo(new THREE.Vector3(this.pickedObject.position.x, this.pickedObject.position.y, this.pickedObject.position.z)));
+        const isNearObject = v1.distanceTo(new THREE.Vector3(this.pickedObject.position.x, this.pickedObject.position.y, this.pickedObject.position.z)) < this.maxInteractiveDistance;
+
         // if we're looking at the same object as before
         // increment time select timer
-        if (this.pickedObject && lastPickedObject === this.pickedObject && !this.selected) {
+        if (this.pickedObject && lastPickedObject === this.pickedObject && !this.selected && isNearObject) {
           this.selectTimer += elapsedTime;
           if (this.selectTimer >= this.selectDuration) {
             this.selectTimer = 0;
