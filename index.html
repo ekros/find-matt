@@ -48,6 +48,9 @@
         let currentQuestCompleted = false;
         let scansBeforeNextEvent; // systems the player needs to scan before the next event
 
+        let glowingSystems;
+        let glowApplied = false;
+
         // starship
         let starship;
         let starshipDirection;
@@ -105,7 +108,7 @@
             const z = 4000 * Math.random() - 2000;
 
             const geometry = new THREE.CircleGeometry( isSingularity ? 7 : 10, 32 );
-            const material = new THREE.MeshBasicMaterial();
+            const material = new THREE.MeshBasicMaterial({ transparent: false });
             const circle = new THREE.Mesh( geometry, material );
             circle.position.x = x;
             circle.position.y = y;
@@ -113,10 +116,22 @@
             circle.kind = isSingularity ? "singularity" : "system";
             circle.systemId = i;
             circle.lookAt(starship.position);
+
+            // glow
+            const glowGeometry = new THREE.CircleGeometry( isSingularity ? 8 : 11, 32 );
+            const glowMaterial = new THREE.MeshBasicMaterial({ opacity: 0.2, transparent: true });
+            const glow = new THREE.Mesh( glowGeometry, glowMaterial );
+            glow.position.x = x;
+            glow.position.y = y;
+            glow.position.z = z;
+            glow.lookAt(starship.position);
+
             if (isSingularity) {
               circle.material.color.setHSL(0.6, 0.8, 0.3);
+              glow.material.color.setHSL(0.6, 0.8, 0.3);
             }
             scene.add( circle );
+            scene.add( glow );
           }
 
           renderer = new THREE.WebGLRenderer();
@@ -492,6 +507,10 @@
             systems.forEach(system => {
               system.lookAt(starship.position);
             });
+            const glows = getAllGlows();
+            glows.forEach(glow => {
+              glow.lookAt(starship.position);
+            })
           }
 
           // scanning
