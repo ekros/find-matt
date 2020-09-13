@@ -15,10 +15,8 @@ class MessageBox {
         // cast a ray through the frustum
         raycaster.setFromCamera({ x: 0, y: 0 }, camera);
 
-        console.log("this.raycaster.ray", raycaster.ray);
         let target = new THREE.Vector3();
         raycaster.ray.at(45, target);
-        console.log("target", target);
 
         this.boxPosition = { x: target.x, y: target.y, z: target.z };
         const { x, y, z } = this.boxPosition;
@@ -32,7 +30,6 @@ class MessageBox {
         this.material.map = new THREE.CanvasTexture( this.canvas );
 
         this.plane = new THREE.Mesh( geometry, this.material );
-        console.log("y", y);
         this.plane.position.x = x;
         this.plane.position.y = y - 50;
         this.plane.position.z = z;
@@ -45,9 +42,7 @@ class MessageBox {
 
     updateText(newText) {
       const text = newText || this.pages[this.pageCursor];
-      // console.log("text", text);
       const ctx = this.canvas.getContext( '2d' );
-        // console.log("render message box");
 
       const w = ctx.canvas.width;
       const h = ctx.canvas.height;
@@ -71,7 +66,6 @@ class MessageBox {
     }
 
     render(pages) {
-      // console.log("render pages", pages);
       if (!this.pages) {
         this.pages = typeof (pages) === "string" ? [pages] : pages;
       }
@@ -100,7 +94,6 @@ class MessageBox {
     autoNext(timeout) {
       return new Promise(resolve => {
         const interval = setInterval(() => {
-          console.log("interval");
           if(!this.next()) {
             clearInterval(interval);
             resolve();
@@ -111,15 +104,11 @@ class MessageBox {
 
     next() {
       if (this.pages) {
-        console.log("next", this.pages);
-        console.log("this.pages", this.pages);
         this.pageCursor += 1;
-        console.log("this.pageCursor", this.pageCursor);
         if (this.pageCursor === this.pages.length) {
           this.destroy();
           return false;
         } else {
-          console.log("this.pages[this.pageCursor]", this.pages[this.pageCursor]);
           this.render();
           return true;
         }

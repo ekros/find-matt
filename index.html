@@ -216,7 +216,6 @@
 
         function scanSystem(system) {
           gameState = GAME_STATES.SCANNING;
-          console.log("starship", starship.position);
           message = new MessageBox(scene, camera, starship.position);
         }
 
@@ -299,7 +298,6 @@
             message.render("Game Over");
             gameState = GAME_STATES.GAME_OVER;
           }));
-          console.log("enemies", enemies);
         }
 
         function addMattStarship() {
@@ -308,7 +306,6 @@
           mattStarship = new MattStarship(randomNearSystem, scene, starship.position, () => {
             message.destroy();
             scanProgress = 0; // reset any current scanning
-            console.log(`%cMATT`, "background:blue;color:white;");
             message = new MessageBox(scene, camera, starship.position);
             message.render(["I finally managed to\nintercept Matt's starship. He looked surprised.", "- I was losing hope - he said.\n- But now I'm sure we\nwill be successful\nin our mission", "- I went across a thousand\nstars for you - I said.", "- Then let's find The Paradise together", "My paradise is wherever you are.", "THE END"]);
             gameState = GAME_STATES.GAME_OVER;
@@ -366,7 +363,6 @@
 
               // message = new MessageBox(scene, camera, starship.position); // remove
               if (currentQuestCompleted) {
-                console.log("MEET THE PLAGUE COMPLETED");
                 gameState = GAME_STATES.PAUSED;
                 message.render(["I'm not alone in this sector\nI detect a near starship...", "The Plague is here!", "I marked its position on the map\nso I remember to stay away\n from them."]);
                 addRandomEnemy();
@@ -391,7 +387,6 @@
                 setSearchArea(searchAreaCenter.position, 500);
               }
               if (currentQuestCompleted) {
-                console.log("FIND THIRD BEACON COMPLETED");
                 gameState = GAME_STATES.PAUSED;
                 message.render(["Bad news...", "His navigation system seems definitively broken", "He is heading to The Plague territory!", "I need to arrive to the\ndestination sector without\nbeing discovered."]);
                 currentQuestCompleted = false;
@@ -456,7 +451,6 @@
 
           // run a AI cycle for enemies/matt
           if (tick % 40 === 0 && gameState !== GAME_STATES.PAUSED && gameState !== GAME_STATES.GAME_OVER) {
-            // console.log("tick", tick);
             enemies.forEach(e => {
               e.think();
             });
@@ -495,11 +489,9 @@
 
             // update distance every 10 ticks
             if (tick % 10 === 0) {
-              console.log("speed", speed);
               distanceToDestination = Math.sqrt(Math.pow(destinationObject.position.x - starship.position.x, 2) +
               Math.pow(destinationObject.position.y - starship.position.y, 2) +
               Math.pow(destinationObject.position.z - starship.position.z, 2));
-              console.log("Remaining distance", distanceToDestination);
             }
 
 
@@ -520,11 +512,9 @@
                 message.render("This is the last entry in my log\nThe Plague caught me\nMatt, forgive me.\n(GAME OVER)");
                 gameState = GAME_STATES.GAME_OVER;
               } else if (!destinationObject.isNextTarget) {
-                console.log("[1] scansBeforeNextEvent", scansBeforeNextEvent);
                 setVisited(destinationObject);
                 if (destinationObject.inSearchArea && scansBeforeNextEvent > 0) {
                   scansBeforeNextEvent -= 1;
-                  console.log("[2] scansBeforeNextEvent", scansBeforeNextEvent);
                   if (scansBeforeNextEvent === 0) {
                     currentQuestCompleted = true; // trigger next event in the timeline
                   }
@@ -532,7 +522,6 @@
                 if (!destinationObject.inSearchArea || (destinationObject.inSearchArea && scansBeforeNextEvent > 0)) {
                   if (destinationObject.kind === "singularity") {
                     const jumpsFound = Math.floor(Math.random()*6 + 1);
-                    console.log("jumpsFound", jumpsFound, Math.random()*6);
                     jumpsAvailable += jumpsFound;
                     jumpsMessage.updateText(String(`Jumps: ${jumpsAvailable}`));
                     message.render(`Found black matter\nfor ${jumpsFound} jumps`);
@@ -557,29 +546,23 @@
 
           // if (!lockSelection) {
           //   console.group("1");
-          //   console.log("selectedObject", selectedObject);
-          //   console.log("gameState", gameState);
           //   console.groupEnd("1");
           // }
           if (selectedObject && speed === 0 && selectedObject.systemId !== orbitingSystemId &&
             gameState !== GAME_STATES.PAUSED && (selectedObject.kind === "system" || selectedObject.kind === "singularity") && !selectedObject.isVisited) {
 
-            // console.log(selectedObject)
             selectedObject.material.color.setHex(0xffff00);
             goTo(selectedObject);
           } else if (selectedObject && (gameState === GAME_STATES.PAUSED || gameState === GAME_STATES.GAME_OVER) &&
             selectedObject.kind === "message" && !lockSelection) {
-            console.log("autoNext");
             message.autoNext()
             .then(() => {
               if (gameState === GAME_STATES.GAME_OVER) {
                 restartGame();
               } else {
-                console.log("go idle");
                 gameState = GAME_STATES.IDLE;
               }
             });
-            // console.log("lockSelection", lockSelection);
             // if (!lockSelection && !message.next()) {
             //   gameProgress += 1;
             //   gameState = GAME_STATES.IDLE;

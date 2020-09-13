@@ -1,6 +1,5 @@
 class Enemy {
   constructor(orbitingSystem, scene, starshipPosition, gameOverCallback, options) {
-    console.log("orbitingSystem.rotation", orbitingSystem.rotation);
     this.inTransitToSystem;
     this.position = orbitingSystem.position;
     this.orbitingSystem = orbitingSystem;
@@ -25,11 +24,8 @@ class Enemy {
       this.position.y - this.starshipPosition.y,
       this.position.z - this.starshipPosition.z);
     enemyDirection = enemyDirection.normalize();
-    console.log("enemyDirection", enemyDirection);
     const v1 = new THREE.Vector3(x1, y1, z1);
     const v2 = new THREE.Vector3(x2, y2, z2);
-    console.log("v1", v1);
-    console.log("v2", v2);
 
     const distance = v1.distanceTo(v2);
     enemyDirection.applyAxisAngle(new THREE.Vector3(1, 0, 0), 0.02);
@@ -37,7 +33,6 @@ class Enemy {
 
     let target = new THREE.Vector3();
     raycaster.ray.at(distance, target);
-    console.log("target", target);
 
     circle.position.x = target.x;
     circle.position.y = target.y;
@@ -59,14 +54,10 @@ class Enemy {
     v1.distanceTo(new THREE.Vector3(obj.position.x, obj.position.y, obj.position.z)) > 50 &&
     v1.distanceTo(new THREE.Vector3(obj.position.x, obj.position.y, obj.position.z)) < maxDistance
     });
-    console.log("%cnew direction", "background:black;color:white");
-    console.log("inTransitToSystem", this.inTransitToSystem);
     const direction = new THREE.Vector3(this.inTransitToSystem.position.x - this.object3D.position.x,
       this.inTransitToSystem.position.y - this.object3D.position.y,
       this.inTransitToSystem.position.z - this.object3D.position.z);
-      console.log("direction", direction);
     this.direction = direction.normalize();
-    console.log("this.direction", this.direction);
     // add direction line
     const geo = new THREE.Geometry();
     geo.vertices.push(v1);
@@ -80,7 +71,6 @@ class Enemy {
     this.object3D.position.x += this.direction.x * this.speed;
     this.object3D.position.y += this.direction.y * this.speed;
     this.object3D.position.z += this.direction.z * this.speed;
-// console.log("this.object3D", this.object3D.position);
     const v1 = new THREE.Vector3(this.object3D.position.x, this.object3D.position.y, this.object3D.position.z);
     const { x: posX, y: posY, z: posZ } = this.inTransitToSystem.position;
     if (v1.distanceTo(new THREE.Vector3(posX, posY, posZ)) < 50) {
@@ -100,7 +90,6 @@ class Enemy {
     if (this.inTransitToSystem) {
       this.move();
     } else {
-      console.log("thinking...");
       this.inTransitToSystem = {};
       this.goTo();
     }

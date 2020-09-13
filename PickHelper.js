@@ -74,15 +74,12 @@ class PickHelper {
       const lastPickedObject = this.pickedObject;
 
       if (!this.pickedObject && this.selected) {
-        console.log("exiting");
         this.selected = false;
         this.selectTimer = 0;
       }
 
       // restore the color if there is a picked object
       if (this.pickedObject) {
-        // console.log("%cpicked object!", "background:gray");
-        // console.log(`%ctime ${elapsedTime}`, "background:black;color:white;");
         // this.pickedObject.material.emissive.setHex(this.pickedObjectSavedColor);
         this.pickedObject = undefined;
       }
@@ -92,14 +89,12 @@ class PickHelper {
       // get the list of objects the ray intersected
       const intersectedObjects = this.raycaster.intersectObjects(scene.children);
       if (intersectedObjects.length) {
-        // console.log("intersection!!");
         // pick the first object. It's the closest one
         this.pickedObject = intersectedObjects[0].object;
 
         // only pick if is nearer than the maximum distance.
         // this ensures objects behind the fog are not selected
         const v1 = new THREE.Vector3(this.camera.position.x, this.camera.position.y, this.camera.position.z);
-        console.log("distanceTo", v1.distanceTo(new THREE.Vector3(this.pickedObject.position.x, this.pickedObject.position.y, this.pickedObject.position.z)));
         const isNearObject = v1.distanceTo(new THREE.Vector3(this.pickedObject.position.x, this.pickedObject.position.y, this.pickedObject.position.z)) < this.maxInteractiveDistance;
 
         // if we're looking at the same object as before
@@ -133,7 +128,6 @@ class PickHelper {
         // this.pickedObjectSavedColor = this.pickedObject.material.emissive.getHex();
         // set its emissive color to flashing red/yellow
         // this.pickedObject.material.emissive.setHex((time * 8) % 2 > 1 ? 0xFFFF00 : 0xFF0000);
-        // console.log("pickedObject", this.pickedObject);
       }
     }
 
