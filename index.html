@@ -55,7 +55,7 @@
         let starship;
         let starshipDirection;
         let speed = 0;
-        const accel = 0.003;
+        const accel = 0.005;
         const topSpeed = 1;
         let destinationObject;
         let distanceToDestination;
@@ -462,7 +462,7 @@
 
 
             // acceleration and slow down
-            if (distanceToDestination && distanceToDestination < 250) {
+            if (distanceToDestination && distanceToDestination < 200) {
               speed -= accel * 2;
             } else if (speed < topSpeed) {
               speed += accel;
