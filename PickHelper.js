@@ -40,16 +40,16 @@ class PickHelper {
       this.cursorTexture = makeDataTexture(cursorColors, 2, 1);
 
       const ringRadius = 0.3;
-      const tubeRadius = 0.1;
+      const tubeRadius = 0.15;
       const tubeSegments = 4;
-      const ringSegments = 64;
+      const ringSegments = 4;
       const cursorGeometry = new THREE.TorusBufferGeometry(
         ringRadius, tubeRadius, tubeSegments, ringSegments);
 
         const cursorMaterial = new THREE.MeshBasicMaterial({
-          color: 'deepskyblue',
+          color: 'yellow',
           map: this.cursorTexture,
-          transparent: false,
+          transparent: true,
           blending: THREE.CustomBlending,
           blendSrc: THREE.OneMinusDstColorFactor,
           blendDst: THREE.OneMinusSrcColorFactor,

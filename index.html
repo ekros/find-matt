@@ -10,6 +10,7 @@
   <script src="VRButton.js"></script>
   <script src="PickHelper.js"></script>
   <script src="MessageBox.js"></script>
+  <script src="StaticMessageBox.js"></script>
   <script src="Enemy.js"></script>
   <script src="MattStarship.js"></script>
   <script type="module">
@@ -17,6 +18,10 @@
   			let camera, renderer, material;
         let scene = new THREE.Scene();
         let mouseX = 0, mouseY = 0;
+
+        // jumps
+        let jumpsAvailable = 10;
+        let jumpsMessage;
 
         // game states
         const GAME_STATES = {
@@ -38,7 +43,7 @@
           CHASING_MATT: 7,
           END: 8
         };
-        let gameProgress = GAME_PROGRESS.CHASING_MATT;
+        let gameProgress = GAME_PROGRESS.FOLLOW_MATT_ITINERARY;
         let gameState;
         let currentQuestCompleted = false;
         let scansBeforeNextEvent; // systems the player needs to scan before the next event
@@ -87,24 +92,30 @@
           starship.add(camera);
 
           message = new MessageBox(scene, camera, starship.position);
+          jumpsMessage = new StaticMessageBox(scene, camera, starship.position);
+          jumpsMessage.render([`Jumps: ${String(jumpsAvailable)}`]);
 
           pickHelper = new PickHelper(camera, MAX_INTERACTIVE_DISTANCE);
 
-          for ( var i = 0; i < 5000; i ++ ) {
+          for ( let i = 0; i < 5000; i ++ ) {
+            const isSingularity = Math.random() > 0.95;
 
-            var x = 4000 * Math.random() - 2000;
-            var y = 4000 * Math.random() - 2000;
-            var z = 4000 * Math.random() - 2000;
+            const x = 4000 * Math.random() - 2000;
+            const y = 4000 * Math.random() - 2000;
+            const z = 4000 * Math.random() - 2000;
 
-            const geometry = new THREE.CircleGeometry( 10, 32 );
+            const geometry = new THREE.CircleGeometry( isSingularity ? 7 : 10, 32 );
             const material = new THREE.MeshBasicMaterial();
             const circle = new THREE.Mesh( geometry, material );
             circle.position.x = x;
             circle.position.y = y;
             circle.position.z = z;
-            circle.kind = "system";
+            circle.kind = isSingularity ? "singularity" : "system";
             circle.systemId = i;
             circle.lookAt(starship.position);
+            if (isSingularity) {
+              circle.material.color.setHSL(0.6, 0.8, 0.3);
+            }
             scene.add( circle );
           }
 
@@ -187,12 +198,16 @@
         }
 
         function goTo(selectedObject) {
-          speed = 0.1;
-          starshipDirection = new THREE.Vector3(selectedObject.position.x - starship.position.x,
-            selectedObject.position.y - starship.position.y,
-            selectedObject.position.z - starship.position.z);
-          starshipDirection = starshipDirection.normalize();
-          destinationObject = selectedObject;
+          if (jumpsAvailable > 0) {
+            jumpsAvailable -= 1;
+            jumpsMessage.updateText(String(`Jumps: ${jumpsAvailable}`));
+            speed = 0.1;
+            starshipDirection = new THREE.Vector3(selectedObject.position.x - starship.position.x,
+              selectedObject.position.y - starship.position.y,
+              selectedObject.position.z - starship.position.z);
+              starshipDirection = starshipDirection.normalize();
+              destinationObject = selectedObject;
+          }
         }
 
         function scanSystem(system) {
@@ -202,7 +217,7 @@
         }
 
         function getAllSystems() {
-          return scene.children.filter(obj => obj.kind === "system");
+          return scene.children.filter(obj => obj.kind === "system" || obj.kind === "singularity");
         }
 
         function getNearSystems(center, distance) {
@@ -299,6 +314,8 @@
   			function render() {
           let time = Date.now() * 0.00005;
 
+          jumpsMessage.followCamera();
+
   				// camera.position.x += ( mouseX - camera.position.x ) * 0.05;
   				// camera.position.y += ( - mouseY - camera.position.y ) * 0.05;
           switch(gameProgress) {
@@ -345,7 +362,7 @@
             case GAME_PROGRESS.FIND_SECOND_BEACON:
               if (currentQuestCompleted) {
                 gameState = GAME_STATES.PAUSED;
-                message.render(["It's my lucky day!\nI found another beacon!", "Matt is OK, and he\nis looking for exotic matter\nto power his starship.", "It can be found scanning singularities.\nI need it to travel through\ninterestellar space.", "His ship's navigation system\nseems to be broken\nso I can only make aproximate\ncalculations about his route."]);
+                message.render(["It's my lucky day!\nI found another beacon!", "Matt is OK, and he\nis looking for black matter\nto power his starship.", "It can be found scanning singularities (blue).\nI need it to travel through\ninterestellar space.", "His ship's navigation system\nseems to be broken\nso I can only make aproximate\ncalculations about his route."]);
                 currentQuestCompleted = false;
                 gameProgress += 1;
                 clearSearchArea();
@@ -406,7 +423,7 @@
               searchAreaCenter = getRandomSystemInFront(0);
               setSearchArea(searchAreaCenter.position, 400);
             }
-            // currentQuestCompleted = true; // TODO: remove this. Just a bypass for now
+            currentQuestCompleted = true; // TODO: remove this. Just a bypass for now
             if (currentQuestCompleted) {
               gameState = GAME_STATES.PAUSED;
               message.render(["I detected another signal today.\nBut this time is not a beacon.", "It's Matt's starship!\nI must hurry!"]);
@@ -487,10 +504,9 @@
               scanProgress = 0;
               // let's reveal what is in this system
               if (destinationObject.inDangerArea) {
-                message.render("This is the last entry in my log\nThe Plague caught me\nMatt, forgive me.");
+                message.render("This is the last entry in my log\nThe Plague caught me\nMatt, forgive me.\n(GAME OVER)");
                 gameState = GAME_STATES.GAME_OVER;
               } else if (!destinationObject.isNextTarget) {
-                // TODO: you could collect items if any
                 console.log("[1] scansBeforeNextEvent", scansBeforeNextEvent);
                 setVisited(destinationObject);
                 if (destinationObject.inSearchArea && scansBeforeNextEvent > 0) {
@@ -501,7 +517,18 @@
                   }
                 }
                 if (!destinationObject.inSearchArea || (destinationObject.inSearchArea && scansBeforeNextEvent > 0)) {
-                  message.render("Nothing found");
+                  if (destinationObject.kind === "singularity") {
+                    const jumpsFound = Math.floor(Math.random()*6 + 1);
+                    console.log("jumpsFound", jumpsFound, Math.random()*6);
+                    jumpsAvailable += jumpsFound;
+                    jumpsMessage.updateText(String(`Jumps: ${jumpsAvailable}`));
+                    message.render(`Found black matter\nfor ${jumpsFound} jumps`);
+                  } else if (jumpsAvailable === 0) {
+                    message.render("I run out of black matter.\nI will end my days here.\n(GAME OVER)");
+                    gameState = GAME_STATES.GAME_OVER;
+                  } else {
+                    message.render("Nothing found");
+                  }
                   setTimeout(() => {
                     message.destroy();
                   }, 1500);
@@ -524,10 +551,10 @@
           //   console.groupEnd("1");
           // }
           if (selectedObject && speed === 0 && selectedObject.systemId !== orbitingSystemId &&
-            gameState !== GAME_STATES.PAUSED && selectedObject.kind === "system" && !selectedObject.isVisited) {
+            gameState !== GAME_STATES.PAUSED && (selectedObject.kind === "system" || selectedObject.kind === "singularity") && !selectedObject.isVisited) {
 
             // console.log(selectedObject)
-            selectedObject.material.color.setHSL( 0.7, 1, 0.8 );
+            selectedObject.material.color.setHex(0xffff00);
             goTo(selectedObject);
           } else if (selectedObject && (gameState === GAME_STATES.PAUSED || gameState === GAME_STATES.GAME_OVER) &&
             selectedObject.kind === "message" && !lockSelection) {

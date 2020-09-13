@@ -13,9 +13,9 @@ class Enemy {
     this.options = options;
 
     // render
-    const geometry = new THREE.ConeGeometry( 5, 20, 32 );
+    const geometry = new THREE.RingGeometry( 3, 6, 2 );
     const material = new THREE.MeshBasicMaterial( {color: options && options.color || 0xff0000} );
-    const cone = new THREE.Mesh( geometry, material );
+    const circle = new THREE.Mesh( geometry, material );
 
     const raycaster = new THREE.Raycaster();
     const { x: x1, y: y1, z: z1 } = this.starshipPosition;
@@ -39,12 +39,12 @@ class Enemy {
     raycaster.ray.at(distance, target);
     console.log("target", target);
 
-    cone.position.x = target.x;
-    cone.position.y = target.y;
-    cone.position.z = target.z;
-    cone.kind = options && options.kind || "enemy";
-    this.object3D = cone;
-    this.scene.add( cone );
+    circle.position.x = target.x;
+    circle.position.y = target.y;
+    circle.position.z = target.z;
+    circle.kind = options && options.kind || "enemy";
+    this.object3D = circle;
+    this.scene.add( circle );
   }
 
   goTo() {
@@ -55,7 +55,7 @@ class Enemy {
         return null;
       }
     const maxDistance = this.options && this.options.maxDistance || 700;
-    return obj.kind === "system" &&
+    return (obj.kind === "system" || obj.kind === "singularity") &&
     v1.distanceTo(new THREE.Vector3(obj.position.x, obj.position.y, obj.position.z)) > 50 &&
     v1.distanceTo(new THREE.Vector3(obj.position.x, obj.position.y, obj.position.z)) < maxDistance
     });
@@ -90,6 +90,8 @@ class Enemy {
       this.scene.remove(this.directionLine);
       this.goTo();
     }
+    // face the camera
+    this.object3D.lookAt(this.starshipPosition);
   }
 
   think() {

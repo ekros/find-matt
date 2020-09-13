@@ -1,11 +1,14 @@
 class MessageBox {
-    constructor(scene, camera, position, size = {width: 60, height: 25}) {
+    constructor(scene, camera, position, size = {width: 60, height: 25}, options) {
         this.scene = scene;
         this.canvas = document.createElement("canvas");
         this.cameraPosition = position;
         this.size = size;
         this.pages = undefined;
         this.pageCursor = 0;
+        this.options = options;
+        this.camera = camera;
+        this.starshipPosition = position;
 
         // set default position in front of the camera
         const raycaster = new THREE.Raycaster();
@@ -40,15 +43,8 @@ class MessageBox {
         this.scene.add( this.plane );
     }
 
-    render(pages) {
-      console.log("render pages", pages);
-      if (!this.pages) {
-        this.pages = typeof (pages) === "string" ? [pages] : pages;
-      }
-      if (this.pages && typeof (pages) === "string") {
-        this.pages = [pages];
-      }
-      const text = this.pages[this.pageCursor];
+    updateText(newText) {
+      const text = newText || this.pages[this.pageCursor];
       console.log("text", text);
       const ctx = this.canvas.getContext( '2d' );
         // console.log("render message box");
@@ -61,7 +57,7 @@ class MessageBox {
       ctx.fillStyle = "#FFFFFF";
       ctx.fillRect(0, 0, w, h);
 
-      ctx.font = "24px Arial";
+      ctx.font = `${this.options && this.options.fontSize || `20px`} Arial`;
       ctx.fillStyle = "black";
 
       // split text using line breaks
@@ -71,8 +67,34 @@ class MessageBox {
           ctx.fillText(textLine, 5, 50 + 24 * index, w);
           })
       }
-
       this.material.map.needsUpdate = true;
+    }
+
+    render(pages, getCamera) {
+      console.log("render pages", pages);
+      if (!this.pages) {
+        this.pages = typeof (pages) === "string" ? [pages] : pages;
+      }
+      if (this.pages && typeof (pages) === "string") {
+        this.pages = [pages];
+      }
+      this.updateText();
+    }
+
+    followCamera() {
+      // follow camera if the message box is static
+      if (this.options && this.options.static) {
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera({ x: 0, y: 0 }, this.camera);
+        let target = new THREE.Vector3();
+        raycaster.ray.at(this.options && this.options.distance || 100, target);
+        this.boxPosition = { x: target.x, y: target.y, z: target.z };
+        const { x, y, z } = this.boxPosition;
+        this.plane.position.x = x;
+        this.plane.position.y = y - (this.options && this.options.yOffset || 30);
+        this.plane.position.z = z;
+        this.plane.lookAt(this.starshipPosition);
+      }
     }
 
     autoNext() {
