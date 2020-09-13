@@ -73,6 +73,8 @@ var VRButton = {
 
 				if ( currentSession === null ) {
 
+          playMusic();
+          
 					// WebXR's requestReferenceSpace only works if the corresponding feature
 					// was requested at session creation time. For simplicity, just ask for
 					// the interesting ones as optional features, but be aware that the

@@ -7,6 +7,7 @@
   </style>
 </head>
 <body>
+  <script src="music.js"></script>
   <script src="VRButton.js"></script>
   <script src="PickHelper.js"></script>
   <script src="MessageBox.js"></script>
@@ -14,6 +15,7 @@
   <script src="Enemy.js"></script>
   <script src="MattStarship.js"></script>
   <script type="module">
+
         let tick = 0;
   			let camera, renderer, material;
         let scene = new THREE.Scene();
@@ -48,9 +50,6 @@
         let gameState;
         let currentQuestCompleted = false;
         let scansBeforeNextEvent; // systems the player needs to scan before the next event
-
-        let glowingSystems;
-        let glowApplied = false;
 
         // starship
         let starship;
@@ -118,22 +117,10 @@
             circle.systemId = i;
             circle.lookAt(starship.position);
 
-            // glow
-            const glowGeometry = new THREE.CircleGeometry( isSingularity ? 8 : 11, 32 );
-            const glowMaterial = new THREE.MeshBasicMaterial({ opacity: 0.2, transparent: true });
-            const glow = new THREE.Mesh( glowGeometry, glowMaterial );
-            glow.position.x = x;
-            glow.position.y = y;
-            glow.position.z = z;
-            glow.kind = "glow";
-            glow.lookAt(starship.position);
-
             if (isSingularity) {
               circle.material.color.setHSL(0.6, 0.8, 0.3);
-              glow.material.color.setHSL(0.6, 0.8, 0.3);
             }
             scene.add( circle );
-            scene.add( glow );
           }
 
           renderer = new THREE.WebGLRenderer();
@@ -237,10 +224,6 @@
           return scene.children.filter(obj => obj.kind === "system" || obj.kind === "singularity");
         }
 
-        function getAllGlows() {
-          return scene.children.filter(obj => obj.kind === "glow");
-        }
-
         function getNearSystems(center, distance) {
           const v1 = new THREE.Vector3(center.x, center.y, center.z);
           const systems = getAllSystems();
@@ -337,10 +320,6 @@
           systems.forEach(system => {
             system.lookAt(starship.position);
           });
-          const glows = getAllGlows();
-          glows.forEach(glow => {
-            glow.lookAt(starship.position);
-          });
         }
 
   			function render() {
@@ -352,8 +331,7 @@
   				// camera.position.y += ( - mouseY - camera.position.y ) * 0.05;
           switch(gameProgress) {
             case GAME_PROGRESS.INTRO:
-              speed = -0.05;
-              message.render(["- FIND MATT -\nA JS13k 2020 game\nBy Eric Ros\n\nLook here to start.", "To play, just move your headset around.\nNo controllers required."]);
+              message.render(["FIND MATT\nA JS13k 2020 game\nBy Eric Ros\n\nLook here to start.", "To play, just move your headset around.\nNo controllers required."]);
             break;
             case GAME_PROGRESS.FOLLOW_MATT_ITINERARY:
               starship.position.set(0, 1.6, 0);
@@ -527,9 +505,6 @@
 
             // rotate systems to look the starship
             recalculateBillboard();
-          } else if (speed < 0) {
-            starship.position.z -= speed;
-            recalculateBillboard();
           }
 
           // scanning
@@ -580,8 +555,6 @@
 
           const selectedObject = pickHelper.pick({x: 0, y: 0}, scene, camera, time);
 
-          // TODO-ING: use the selected boolean to render the message box
-
           // if (!lockSelection) {
           //   console.group("1");
           //   console.log("selectedObject", selectedObject);
@@ -614,7 +587,6 @@
           } else if (selectedObject && gameProgress === GAME_PROGRESS.INTRO && selectedObject.kind === "message" && !lockSelection) {
             message.autoNext(5000)
             .then(() => {
-              console.log("%cautonext!!!!!!!!!!!!", "background:navy;color:white;");
               message.destroy();
               gameState = GAME_STATES.IDLE;
               speed = 0;
@@ -627,10 +599,6 @@
           } else {
             lockSelection = false;
           }
-  				// starship.lookAt( scene.position );
-
-  				// var h = ( 360 * ( 1.0 + time ) % 360 ) / 360;
-  				// material.color.setHSL( h, 0.5, 0.5 );
 
   				renderer.render( scene, camera );
           tick += 1;
