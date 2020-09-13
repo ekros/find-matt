@@ -26,11 +26,6 @@ var VRButton = {
         button.style.display = 'none';
 				renderer.xr.setSession( session );
 
-				// button.textContent = 'EXIT VR';
-        // button.style.left = 'calc(50% - 50px)';
-  			// button.style.width = '100px';
-  			// button.style.height = 'auto';
-
 				currentSession = session;
         window.xrSessionStarted = true;
 
@@ -74,7 +69,7 @@ var VRButton = {
 				if ( currentSession === null ) {
 
           playMusic();
-          
+
 					// WebXR's requestReferenceSpace only works if the corresponding feature
 					// was requested at session creation time. For simplicity, just ask for
 					// the interesting ones as optional features, but be aware that the

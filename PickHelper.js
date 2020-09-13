@@ -1,6 +1,5 @@
 // based on https://threejsfundamentals.org/threejs/lessons/threejs-webvr-look-to-select.html
 
-// TODO: clean unneeded mouse control code
 class PickHelper {
     constructor(camera, maxInteractiveDistance) {
       this.raycaster = new THREE.Raycaster();
@@ -124,75 +123,6 @@ class PickHelper {
 
           // return this.pickedObject;
           return this.selected ? this.pickedObject : undefined;
-        // save its color
-        // this.pickedObjectSavedColor = this.pickedObject.material.emissive.getHex();
-        // set its emissive color to flashing red/yellow
-        // this.pickedObject.material.emissive.setHex((time * 8) % 2 > 1 ? 0xFFFF00 : 0xFF0000);
       }
     }
-
-    // pick(normalizedPosition, scene, camera, time) {
-    //   // if (cursorKind !== this.cursorKind || cursorKind === "mouse") {
-    //   //   this.cursorKind = cursorKind;
-    //   //   this.cursor = this.getCursor(normalizedPosition);
-    //   //   const lookToSelectCursor = scene.getObjectByName("look-to-select-cursor");
-    //   //   const mouseCursor = scene.getObjectByName("mouse_cursor");
-    //   //   lookToSelectCursor.visible = false;
-    //   //   if (mouseCursor) {
-    //   //     scene.remove(mouseCursor);
-    //   //   }
-    //   //   scene.add(this.cursor);
-    //   // }
-    //
-    //     this.cursor = this.getCursor(normalizedPosition);
-    //     scene.add(this.cursor);
-    //
-    //   const elapsedTime = time - this.lastTime;
-    //   this.lastTime = time;
-    //
-    //   const lastPickedObject = this.pickedObject;
-    //   // restore the color if there is a picked object
-    //   if (this.pickedObject) {
-    //     this.pickedObject = undefined;
-    //   }
-    //
-    //   // cast a ray through the frustum
-    //   this.raycaster.setFromCamera(normalizedPosition, camera);
-    //   // get the list of objects the ray intersected
-    //   const intersectedObjects = this.raycaster.intersectObjects(scene.children);
-    //   if (intersectedObjects.length) {
-    //     // pick the first object. It's the closest one
-    //     this.pickedObject = intersectedObjects[0].object;
-    //   }
-    //
-    //   // show or hide cursor
-    //   this.cursor.visible = true;
-    //   // this.cursor.visible = this.pickedObject ? true : false;
-    //
-    //   let selected = false;
-    //
-    //   // if we're looking at the same object as before
-    //   // increment time select timer
-    //   if (this.pickedObject && lastPickedObject === this.pickedObject) {
-    //     this.selectTimer += elapsedTime;
-    //     if (this.selectTimer >= this.selectDuration) {
-    //       this.selectTimer = 0;
-    //       selected = true;
-    //     }
-    //   } else {
-    //     this.selectTimer = 0;
-    //   }
-    //
-    //   // set cursor material to show the timer state
-    //   const fromStart = 0;
-    //   const fromEnd = this.selectDuration;
-    //   const toStart = -0.5;
-    //   const toEnd = 0.5;
-    //   // this.cursorTexture.offset.x = THREE.MathUtils.mapLinear(
-    //   //     this.selectTimer,
-    //   //     fromStart, fromEnd,
-    //   //     toStart, toEnd);
-    //
-    //   return selected ? this.pickedObject : undefined;
-    // }
   }

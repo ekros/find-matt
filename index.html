@@ -324,8 +324,6 @@
 
           jumpsMessage.followCamera();
 
-  				// camera.position.x += ( mouseX - camera.position.x ) * 0.05;
-  				// camera.position.y += ( - mouseY - camera.position.y ) * 0.05;
           switch(gameProgress) {
             case GAME_PROGRESS.INTRO:
               message.render(["FIND MATT\nA JS13k 2020 game\nBy Eric Ros\n\nLook here to start.", "To play, just move your headset around.\nNo controllers required."]);
@@ -361,7 +359,6 @@
                 setSearchArea(searchAreaCenter.position, 400);
               }
 
-              // message = new MessageBox(scene, camera, starship.position); // remove
               if (currentQuestCompleted) {
                 gameState = GAME_STATES.PAUSED;
                 message.render(["I'm not alone in this sector\nI detect a near starship...", "The Plague is here!", "I marked its position on the map\nso I remember to stay away\n from them."]);
@@ -406,7 +403,6 @@
               setSearchArea(searchAreaCenter.position, 400);
             }
             if (currentQuestCompleted) {
-              // for the ancient civ you could add a new mechanic or a variation
               gameState = GAME_STATES.PAUSED;
               message.render(["I found another beacon.\nIf my calculations are correct\nthis is Matt's last beacon.", "It says that he received a strange signal from a system far away"]);
               currentQuestCompleted = false;
@@ -434,7 +430,6 @@
               searchAreaCenter = getRandomSystemInFront(0);
               setSearchArea(searchAreaCenter.position, 400);
             }
-            currentQuestCompleted = true; // TODO: remove this. Just a bypass for now
             if (currentQuestCompleted) {
               gameState = GAME_STATES.PAUSED;
               message.render(["I detected another signal today.\nBut this time is not a beacon.", "It's Matt's starship!\nI must hurry!"]);
@@ -461,8 +456,6 @@
 
           // move starship forward
           if (speed > 0) {
-            // let direction = new THREE.Vector3(0, 0, 0);
-            // camera.getWorldDirection(direction);
             starship.position.x += starshipDirection.x * speed;
             starship.position.y += starshipDirection.y * speed;
             starship.position.z += starshipDirection.z * speed;
@@ -544,10 +537,6 @@
 
           const selectedObject = pickHelper.pick({x: 0, y: 0}, scene, camera, time);
 
-          // if (!lockSelection) {
-          //   console.group("1");
-          //   console.groupEnd("1");
-          // }
           if (selectedObject && speed === 0 && selectedObject.systemId !== orbitingSystemId &&
             gameState !== GAME_STATES.PAUSED && (selectedObject.kind === "system" || selectedObject.kind === "singularity") && !selectedObject.isVisited) {
 
@@ -563,10 +552,6 @@
                 gameState = GAME_STATES.IDLE;
               }
             });
-            // if (!lockSelection && !message.next()) {
-            //   gameProgress += 1;
-            //   gameState = GAME_STATES.IDLE;
-            // }
           } else if (selectedObject && gameProgress === GAME_PROGRESS.INTRO && selectedObject.kind === "message" && !lockSelection) {
             message.autoNext(5000)
             .then(() => {
