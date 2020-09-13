@@ -219,8 +219,8 @@
           message = new MessageBox(scene, camera, starship.position);
         }
 
-        function getAllSystems() {
-          return scene.children.filter(obj => obj.kind === "system" || obj.kind === "singularity");
+        function getAllSystems(excludeSingularities) {
+          return scene.children.filter(obj => obj.kind === "system" || (!excludeSingularities && obj.kind === "singularity"));
         }
 
         function getNearSystems(center, distance) {
@@ -277,7 +277,7 @@
         }
 
         function clearSearchArea() {
-          const allSystems = getAllSystems();
+          const allSystems = getAllSystems(true);
           allSystems.forEach(s => {
             unsetSystemInSearchArea(s);
           });
@@ -285,7 +285,7 @@
         }
 
         function clearDangerArea() {
-          const allSystems = getAllSystems();
+          const allSystems = getAllSystems(true);
           allSystems.forEach(s => {
             unsetSystemInDangerArea(s);
           });
