@@ -33,17 +33,18 @@
 
         // game progress
         const GAME_PROGRESS = {
-          FOLLOW_MATT_ITINERARY: 0,
-          FIND_FIRST_BEACON: 1,
-          MEET_THE_PLAGUE: 2,
-          FIND_SECOND_BEACON: 3,
-          FIND_THIRD_BEACON: 4,
-          CROSS_PLAGUE_TERRITORY: 5,
-          ANCIENT_CIV: 6,
-          CHASING_MATT: 7,
-          END: 8
+          INTRO: 0,
+          FOLLOW_MATT_ITINERARY: 1,
+          FIND_FIRST_BEACON: 2,
+          MEET_THE_PLAGUE: 3,
+          FIND_SECOND_BEACON: 4,
+          FIND_THIRD_BEACON: 5,
+          CROSS_PLAGUE_TERRITORY: 6,
+          ANCIENT_CIV: 7,
+          CHASING_MATT: 8,
+          END: 9
         };
-        let gameProgress = GAME_PROGRESS.FOLLOW_MATT_ITINERARY;
+        let gameProgress = GAME_PROGRESS.INTRO;
         let gameState;
         let currentQuestCompleted = false;
         let scansBeforeNextEvent; // systems the player needs to scan before the next event
@@ -331,6 +332,17 @@
           });
         }
 
+        function recalculateBillboard() {
+          const systems = getAllSystems();
+          systems.forEach(system => {
+            system.lookAt(starship.position);
+          });
+          const glows = getAllGlows();
+          glows.forEach(glow => {
+            glow.lookAt(starship.position);
+          });
+        }
+
   			function render() {
           let time = Date.now() * 0.00005;
 
@@ -339,9 +351,15 @@
   				// camera.position.x += ( mouseX - camera.position.x ) * 0.05;
   				// camera.position.y += ( - mouseY - camera.position.y ) * 0.05;
           switch(gameProgress) {
+            case GAME_PROGRESS.INTRO:
+              speed = -0.05;
+              message.render(["- FIND MATT -\nA JS13k 2020 game\nBy Eric Ros\n\nLook here to start.", "To play, just move your headset around.\nNo controllers required."]);
+            break;
             case GAME_PROGRESS.FOLLOW_MATT_ITINERARY:
+              starship.position.set(0, 1.6, 0);
               if (gameState !== GAME_STATES.PAUSED) {
                 gameState = GAME_STATES.PAUSED;
+                message = new MessageBox(scene, camera, starship.position);
                 message.render(["Matt left our planet years ago...\nHe was looking for a new home...\nBefore it's too late.",
                 "I marked in the map where he is\n supposed to be.\n Just look there."]);
                 gameProgress += 1;
@@ -508,14 +526,10 @@
 
 
             // rotate systems to look the starship
-            const systems = getAllSystems();
-            systems.forEach(system => {
-              system.lookAt(starship.position);
-            });
-            const glows = getAllGlows();
-            glows.forEach(glow => {
-              glow.lookAt(starship.position);
-            })
+            recalculateBillboard();
+          } else if (speed < 0) {
+            starship.position.z -= speed;
+            recalculateBillboard();
           }
 
           // scanning
@@ -597,6 +611,15 @@
             //   gameProgress += 1;
             //   gameState = GAME_STATES.IDLE;
             // }
+          } else if (selectedObject && gameProgress === GAME_PROGRESS.INTRO && selectedObject.kind === "message" && !lockSelection) {
+            message.autoNext(5000)
+            .then(() => {
+              console.log("%cautonext!!!!!!!!!!!!", "background:navy;color:white;");
+              message.destroy();
+              gameState = GAME_STATES.IDLE;
+              speed = 0;
+              gameProgress += 1;
+            });
           }
           if (selectedObject) {
             lockSelection = true;

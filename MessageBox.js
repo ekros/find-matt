@@ -45,7 +45,7 @@ class MessageBox {
 
     updateText(newText) {
       const text = newText || this.pages[this.pageCursor];
-      console.log("text", text);
+      // console.log("text", text);
       const ctx = this.canvas.getContext( '2d' );
         // console.log("render message box");
 
@@ -70,8 +70,8 @@ class MessageBox {
       this.material.map.needsUpdate = true;
     }
 
-    render(pages, getCamera) {
-      console.log("render pages", pages);
+    render(pages) {
+      // console.log("render pages", pages);
       if (!this.pages) {
         this.pages = typeof (pages) === "string" ? [pages] : pages;
       }
@@ -97,7 +97,7 @@ class MessageBox {
       }
     }
 
-    autoNext() {
+    autoNext(timeout) {
       return new Promise(resolve => {
         const interval = setInterval(() => {
           console.log("interval");
@@ -105,7 +105,7 @@ class MessageBox {
             clearInterval(interval);
             resolve();
           }
-        }, 2000);
+        }, timeout ? timeout : 2000);
       })
     }
 
