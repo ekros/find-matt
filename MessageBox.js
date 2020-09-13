@@ -98,7 +98,7 @@ class MessageBox {
             clearInterval(interval);
             resolve();
           }
-        }, timeout ? timeout : 2000);
+        }, timeout ? timeout : 5000);
       })
     }
 
