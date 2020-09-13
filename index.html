@@ -124,6 +124,7 @@
             glow.position.x = x;
             glow.position.y = y;
             glow.position.z = z;
+            glow.kind = "glow";
             glow.lookAt(starship.position);
 
             if (isSingularity) {
@@ -235,6 +236,10 @@
           return scene.children.filter(obj => obj.kind === "system" || obj.kind === "singularity");
         }
 
+        function getAllGlows() {
+          return scene.children.filter(obj => obj.kind === "glow");
+        }
+
         function getNearSystems(center, distance) {
           const v1 = new THREE.Vector3(center.x, center.y, center.z);
           const systems = getAllSystems();
@@ -338,7 +343,7 @@
               if (gameState !== GAME_STATES.PAUSED) {
                 gameState = GAME_STATES.PAUSED;
                 message.render(["Matt left our planet years ago...\nHe was looking for a new home...\nBefore it's too late.",
-                "I marked in the map where he is supposed to be. Just look there."]);
+                "I marked in the map where he is\n supposed to be.\n Just look there."]);
                 gameProgress += 1;
               }
             break;

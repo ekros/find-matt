@@ -24,7 +24,7 @@ class MessageBox {
         const { x, y, z } = this.boxPosition;
         const { width, height } = this.size;
         let geometry = new THREE.PlaneGeometry( width, height);
-        this.material = new THREE.MeshBasicMaterial( {color: 0x444444, side: THREE.DoubleSide} );
+        this.material = new THREE.MeshBasicMaterial();
 
         // get canvas and context
         // const drawingCanvas = this.canvas;
@@ -54,11 +54,11 @@ class MessageBox {
 
       ctx.clearRect(0, 0, w, h);
 
-      ctx.fillStyle = "#FFFFFF";
+      ctx.fillStyle = "#222222";
       ctx.fillRect(0, 0, w, h);
 
-      ctx.font = `${this.options && this.options.fontSize || `20px`} Arial`;
-      ctx.fillStyle = "black";
+      ctx.font = `${this.options && this.options.fontSize || `20px`} Lucida Console`;
+      ctx.fillStyle = "white";
 
       // split text using line breaks
       if (text) {
